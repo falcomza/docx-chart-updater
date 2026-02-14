@@ -186,6 +186,7 @@ type relationships struct {
 
 type relationship struct {
 	ID     string `xml:"Id,attr"`
+	Type   string `xml:"Type,attr"`
 	Target string `xml:"Target,attr"`
 }
 

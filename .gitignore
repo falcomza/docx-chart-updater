@@ -1,0 +1,10 @@
+templates/
+*.log
+*.tmp
+*.bak
+*.swp
+.DS_Store
+.claude/
+!README.md
+!.gitignore
+*.md
