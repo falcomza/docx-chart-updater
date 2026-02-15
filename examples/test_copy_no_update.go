@@ -19,7 +19,7 @@ func main() {
 		log.Fatalf("Failed to copy chart: %v", err)
 	}
 
-	if err := u.Save("test_copy_no_update_output.docx"); err != nil {
+	if err := u.Save("outputs/test_copy_no_update_output.docx"); err != nil {
 		log.Fatal(err)
 	}
 

@@ -47,9 +47,9 @@ func main() {
 	// if err := u.UpdateChart(2, subsystems[1].Data); err != nil { log.Fatal(err) }
 	// if err := u.UpdateChart(3, subsystems[2].Data); err != nil { log.Fatal(err) }
 
-	if err := u.Save("output_template_approach.docx"); err != nil {
+	if err := u.Save("outputs/output_template_approach.docx"); err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println("✓ Saved output_template_approach.docx")
+	fmt.Println("✓ Saved outputs/output_template_approach.docx")
 }

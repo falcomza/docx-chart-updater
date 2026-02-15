@@ -92,7 +92,7 @@ func main() {
 	}
 
 	// Save the final document
-	outputPath := "docx_multi_subsystem_output.docx"
+	outputPath := "outputs/docx_multi_subsystem_output.docx"
 	if err := u.Save(outputPath); err != nil {
 		log.Fatal(err)
 	}

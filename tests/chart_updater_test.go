@@ -1,4 +1,4 @@
-package docxchartupdater
+package docxchartupdater_test
 
 import (
 	"archive/zip"
@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	docxchartupdater "github.com/falcomza/docx-chart-updater/src"
 )
 
 func TestBasicUpdate(t *testing.T) {
@@ -19,15 +21,15 @@ func TestBasicUpdate(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := New(inputPath)
+	u, err := docxchartupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	data := ChartData{
+	data := docxchartupdater.ChartData{
 		Categories: []string{"Device A", "Device B", "Device C"},
-		Series: []SeriesData{
+		Series: []docxchartupdater.SeriesData{
 			{Name: "Critical", Values: []float64{4, 3, 2}},
 			{Name: "Non-critical", Values: []float64{8, 7, 6}},
 		},
@@ -68,15 +70,15 @@ func TestInvalidData(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := New(inputPath)
+	u, err := docxchartupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	err = u.UpdateChart(1, ChartData{
+	err = u.UpdateChart(1, docxchartupdater.ChartData{
 		Categories: []string{"A", "B"},
-		Series:     []SeriesData{{Name: "Critical", Values: []float64{1}}},
+		Series:     []docxchartupdater.SeriesData{{Name: "Critical", Values: []float64{1}}},
 	})
 	if err == nil {
 		t.Fatalf("expected length mismatch error")
@@ -92,15 +94,15 @@ func TestUpdateWithSharedStringsWorkbook(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := New(inputPath)
+	u, err := docxchartupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	data := ChartData{
+	data := docxchartupdater.ChartData{
 		Categories: []string{"Node 1", "Node 2"},
-		Series: []SeriesData{
+		Series: []docxchartupdater.SeriesData{
 			{Name: "Critical", Values: []float64{11, 9}},
 			{Name: "Non-critical", Values: []float64{22, 18}},
 		},
@@ -143,15 +145,15 @@ func TestUpdateSpecificChartInMultiChartDocx(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := New(inputPath)
+	u, err := docxchartupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	data := ChartData{
+	data := docxchartupdater.ChartData{
 		Categories: []string{"Router A", "Router B"},
-		Series: []SeriesData{
+		Series: []docxchartupdater.SeriesData{
 			{Name: "Critical", Values: []float64{5, 7}},
 			{Name: "Non-critical", Values: []float64{15, 17}},
 		},
@@ -193,6 +195,8 @@ func buildFixtureDocx(t *testing.T) []byte {
 	docxZip := zip.NewWriter(docx)
 
 	addZipEntry(t, docxZip, "[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"></Types>`)
+	addZipEntry(t, docxZip, "word/document.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body></w:body></w:document>`)
+	addZipEntry(t, docxZip, "word/_rels/document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`)
 	addZipEntry(t, docxZip, "word/charts/chart1.xml", chartFixtureXML)
 	addZipEntry(t, docxZip, "word/charts/_rels/chart1.xml.rels", chartRelsFixtureXML)
 	addZipEntryBytes(t, docxZip, "word/embeddings/Microsoft_Excel_Worksheet1.xlsx", buildFixtureWorkbook(t))
@@ -211,6 +215,8 @@ func buildFixtureDocxWithSharedStrings(t *testing.T) []byte {
 	docxZip := zip.NewWriter(docx)
 
 	addZipEntry(t, docxZip, "[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"></Types>`)
+	addZipEntry(t, docxZip, "word/document.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body></w:body></w:document>`)
+	addZipEntry(t, docxZip, "word/_rels/document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`)
 	addZipEntry(t, docxZip, "word/charts/chart1.xml", chartFixtureXML)
 	addZipEntry(t, docxZip, "word/charts/_rels/chart1.xml.rels", chartRelsFixtureXML)
 	addZipEntryBytes(t, docxZip, "word/embeddings/Microsoft_Excel_Worksheet1.xlsx", buildFixtureWorkbookWithSharedStrings(t))
@@ -229,6 +235,8 @@ func buildFixtureDocxTwoCharts(t *testing.T) []byte {
 	docxZip := zip.NewWriter(docx)
 
 	addZipEntry(t, docxZip, "[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"></Types>`)
+	addZipEntry(t, docxZip, "word/document.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body></w:body></w:document>`)
+	addZipEntry(t, docxZip, "word/_rels/document.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`)
 	addZipEntry(t, docxZip, "word/charts/chart1.xml", chartFixtureXML)
 	addZipEntry(t, docxZip, "word/charts/chart2.xml", chart2FixtureXML)
 	addZipEntry(t, docxZip, "word/charts/_rels/chart1.xml.rels", chartRelsFixtureXML)

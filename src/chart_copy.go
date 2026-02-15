@@ -85,9 +85,8 @@ func (u *Updater) findNextChartIndex() int {
 	}
 
 	maxIndex := 0
-	re := regexp.MustCompile(`^chart(\d+)\.xml$`)
 	for _, entry := range entries {
-		if matches := re.FindStringSubmatch(entry.Name()); matches != nil {
+		if matches := chartFilePattern.FindStringSubmatch(entry.Name()); matches != nil {
 			var idx int
 			fmt.Sscanf(matches[1], "%d", &idx)
 			if idx > maxIndex {
@@ -110,8 +109,7 @@ func (u *Updater) generateWorkbookPath(chartIndex int, sourceWorkbookPath string
 	nameWithoutExt := strings.TrimSuffix(base, ext)
 	
 	// Try to find existing numeric suffix
-	re := regexp.MustCompile(`^(.+?)(\d+)$`)
-	if matches := re.FindStringSubmatch(nameWithoutExt); matches != nil {
+	if matches := workbookNumberPattern.FindStringSubmatch(nameWithoutExt); matches != nil {
 		// Has numeric suffix - use the chart index as the new suffix
 		newName := fmt.Sprintf("%s%d%s", matches[1], chartIndex, ext)
 		return filepath.Join(filepath.Dir(sourceWorkbookPath), newName)
@@ -196,13 +194,16 @@ func (u *Updater) insertChartAfterSource(newChartIndex int, sourceChartIndex int
 	insertPos := drawIdx + paraEndRel + len(closingTag)
 
 	// Generate chart drawing XML for the new chart using its new relationship id
-	chartDrawing := u.generateChartDrawingXML(newChartIndex, newRelId)
+	chartDrawing, err := u.generateChartDrawingXML(newChartIndex, newRelId)
+	if err != nil {
+		return fmt.Errorf("generate drawing xml: %w", err)
+	}
 
-	// Insert the chart drawing after the paragraph
-	result := make([]byte, 0, len(raw)+len(chartDrawing))
-	result = append(result, raw[:insertPos]...)
-	result = append(result, chartDrawing...)
-	result = append(result, raw[insertPos:]...)
+	// Insert the chart drawing after the paragraph (pre-allocate for efficiency)
+	result := make([]byte, len(raw)+len(chartDrawing))
+	n := copy(result, raw[:insertPos])
+	n += copy(result[n:], chartDrawing)
+	copy(result[n:], raw[insertPos:])
 
 	if err := os.WriteFile(docPath, result, 0o644); err != nil {
 		return fmt.Errorf("write document.xml: %w", err)
@@ -218,11 +219,9 @@ func (u *Updater) getRelIdForChart(chartIndex int) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("read document relationships: %w", err)
 	}
-	// Simple string search to avoid re-marshalling; works regardless of xmlns
-	target := fmt.Sprintf("charts/chart%d.xml", chartIndex)
-	// Look for Id="rIdX" preceding the target
-	re := regexp.MustCompile(`Id="(rId[0-9]+)"[^>]*Target="` + regexp.QuoteMeta(target) + `"`)
-	m := re.FindSubmatch(raw)
+	// Build pattern for this specific chart
+	pattern := regexp.MustCompile(fmt.Sprintf(chartRelPatternTemplate, chartIndex))
+	m := pattern.FindSubmatch(raw)
 	if m == nil {
 		return "", fmt.Errorf("relationship for chart%d.xml not found", chartIndex)
 	}
@@ -230,16 +229,15 @@ func (u *Updater) getRelIdForChart(chartIndex int) (string, error) {
 }
 
 // getNextDocPrId finds the next available docPr ID in the document
-func (u *Updater) getNextDocPrId() int {
+func (u *Updater) getNextDocPrId() (int, error) {
 	docPath := filepath.Join(u.tempDir, "word", "document.xml")
 	raw, err := os.ReadFile(docPath)
 	if err != nil {
-		return 99999 // fallback to a high number
+		return 0, fmt.Errorf("read document: %w", err)
 	}
 
-	// Find all docPr id values
-	re := regexp.MustCompile(`docPr id="(\d+)"`)
-	matches := re.FindAllStringSubmatch(string(raw), -1)
+	// Find all docPr id values using package-level regex
+	matches := docPrIDPattern.FindAllStringSubmatch(string(raw), -1)
 	
 	maxId := 0
 	for _, match := range matches {
@@ -252,26 +250,25 @@ func (u *Updater) getNextDocPrId() int {
 		}
 	}
 	
-	return maxId + 1
+	return maxId + 1, nil
 }
 
 // getNextDocumentRelId finds the next available relationship ID in document.xml.rels
-func (u *Updater) getNextDocumentRelId() string {
+func (u *Updater) getNextDocumentRelId() (string, error) {
 	relsPath := filepath.Join(u.tempDir, "word", "_rels", "document.xml.rels")
 	raw, err := os.ReadFile(relsPath)
 	if err != nil {
-		return "rId99" // fallback
+		return "", fmt.Errorf("read document rels: %w", err)
 	}
 
 	var rels relationships
 	if err := xml.Unmarshal(raw, &rels); err != nil {
-		return "rId99"
+		return "", fmt.Errorf("parse document rels: %w", err)
 	}
 
 	maxId := 0
-	re := regexp.MustCompile(`^rId(\d+)$`)
 	for _, rel := range rels.Relationships {
-		if matches := re.FindStringSubmatch(rel.ID); matches != nil {
+		if matches := relIDPattern.FindStringSubmatch(rel.ID); matches != nil {
 			var id int
 			fmt.Sscanf(matches[1], "%d", &id)
 			if id > maxId {
@@ -280,23 +277,26 @@ func (u *Updater) getNextDocumentRelId() string {
 		}
 	}
 
-	return fmt.Sprintf("rId%d", maxId+1)
+	return fmt.Sprintf("rId%d", maxId+1), nil
 }
 
 // generateChartDrawingXML creates the inline drawing XML for a chart
-func (u *Updater) generateChartDrawingXML(chartIndex int, relId string) []byte {
+func (u *Updater) generateChartDrawingXML(chartIndex int, relId string) ([]byte, error) {
 	// Get a unique docPr ID (document-wide drawing object ID)
-	docPrId := u.getNextDocPrId()
+	docPrId, err := u.getNextDocPrId()
+	if err != nil {
+		return nil, fmt.Errorf("get next docPr id: %w", err)
+	}
 	
 	// This generates a chart drawing paragraph matching Word/LibreOffice structure
 	// Note: wp14 namespace is declared in the document root
 	const template = `<w:p><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" wp14:anchorId="%08X" wp14:editId="%08X"><wp:extent cx="6099523" cy="3340467"/><wp:effectExtent l="0" t="0" r="15875" b="12700"/><wp:docPr id="%d" name="Chart %d"/><wp:cNvGraphicFramePr/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="%s"/></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`
 
-	// Generate unique IDs for anchorId and editId (using chartIndex-based values)
-	anchorId := 0x30000000 + uint32(chartIndex)*0x1000
-	editId := 0x0D000000 + uint32(chartIndex)*0x1000
+	// Generate unique IDs using constants
+	anchorId := ChartAnchorIDBase + uint32(chartIndex)*ChartIDIncrement
+	editId := ChartEditIDBase + uint32(chartIndex)*ChartIDIncrement
 	
-	return []byte(fmt.Sprintf(template, anchorId, editId, docPrId, chartIndex, relId))
+	return []byte(fmt.Sprintf(template, anchorId, editId, docPrId, chartIndex, relId)), nil
 }
 
 // addChartRelationship appends a Relationship for the new chart to document.xml.rels and returns its Id
@@ -308,18 +308,22 @@ func (u *Updater) addChartRelationship(chartIndex int) (string, error) {
 	}
 
 	// Compute next Id by scanning existing content
-	nextRelId := u.getNextDocumentRelId()
+	nextRelId, err := u.getNextDocumentRelId()
+	if err != nil {
+		return "", err
+	}
 	
 	// Append a self-closing Relationship before </Relationships>
-	insert := fmt.Sprintf("\n  <Relationship Id=\"%s\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart\" Target=\"charts/chart%d.xml\"/>\n", nextRelId, chartIndex)
+	insert := fmt.Sprintf("\n  <Relationship Id=\"%s\" Type=\"%s/chart\" Target=\"charts/chart%d.xml\"/>\n", nextRelId, OfficeDocumentNS, chartIndex)
 	closer := []byte("</Relationships>")
 	pos := bytes.LastIndex(raw, closer)
 	if pos == -1 {
 		return "", fmt.Errorf("invalid document.xml.rels: missing </Relationships>")
 	}
-	result := append([]byte{}, raw[:pos]...)
-	result = append(result, []byte(insert)...)
-	result = append(result, raw[pos:]...)
+	result := make([]byte, len(raw)+len(insert))
+	n := copy(result, raw[:pos])
+	n += copy(result[n:], []byte(insert))
+	copy(result[n:], raw[pos:])
 	
 	if err := os.WriteFile(relsPath, result, 0o644); err != nil {
 		return "", fmt.Errorf("write relationships: %w", err)
@@ -340,15 +344,16 @@ func (u *Updater) addContentTypeOverride(chartIndex int) error {
 		return nil // already present
 	}
 
-	insert := fmt.Sprintf("\n  <Override PartName=\"%s\" ContentType=\"application/vnd.openxmlformats-officedocument.drawingml.chart+xml\"/>\n", chartPart)
+	insert := fmt.Sprintf("\n  <Override PartName=\"%s\" ContentType=\"%s\"/>\n", chartPart, ChartContentType)
 	closer := []byte("</Types>")
 	pos := bytes.LastIndex(raw, closer)
 	if pos == -1 {
 		return fmt.Errorf("invalid [Content_Types].xml: missing </Types>")
 	}
-	result := append([]byte{}, raw[:pos]...)
-	result = append(result, []byte(insert)...)
-	result = append(result, raw[pos:]...)
+	result := make([]byte, len(raw)+len(insert))
+	n := copy(result, raw[:pos])
+	n += copy(result[n:], []byte(insert))
+	copy(result[n:], raw[pos:])
 	return os.WriteFile(contentTypesPath, result, 0o644)
 }
 

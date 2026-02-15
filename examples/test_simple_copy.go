@@ -33,7 +33,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := u.Save("test_simple_output.docx"); err != nil {
+	if err := u.Save("outputs/test_simple_output.docx"); err != nil {
 		log.Fatal(err)
 	}
 

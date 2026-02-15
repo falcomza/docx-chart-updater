@@ -1,27 +1,29 @@
-package docxchartupdater
+package docxchartupdater_test
 
 import (
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	docxchartupdater "github.com/falcomza/docx-chart-updater/src"
 )
 
 func TestCopyChart(t *testing.T) {
 	// Create a test DOCX with a chart
-	testDocx := "../docx_template.docx"
+	testDocx := "../templates/docx_template.docx"
 	if _, err := os.Stat(testDocx); err != nil {
 		t.Skipf("Test DOCX not found: %s", testDocx)
 	}
 
-	updater, err := New(testDocx)
+	updater, err := docxchartupdater.New(testDocx)
 	if err != nil {
 		t.Fatalf("Failed to open test DOCX: %v", err)
 	}
 	defer updater.Cleanup()
 
 	// Read document.xml to find some text to insert after
-	docPath := filepath.Join(updater.tempDir, "word", "document.xml")
+	docPath := filepath.Join(updater.TempDir(), "word", "document.xml")
 	docContent, err := os.ReadFile(docPath)
 	if err != nil {
 		t.Fatalf("Failed to read document.xml: %v", err)
@@ -47,13 +49,13 @@ func TestCopyChart(t *testing.T) {
 	}
 
 	// Verify the new chart file exists
-	expectedPath := filepath.Join(updater.tempDir, "word", "charts", "chart2.xml")
+	expectedPath := filepath.Join(updater.TempDir(), "word", "charts", "chart2.xml")
 	if _, err := os.Stat(expectedPath); err != nil {
 		t.Errorf("New chart file does not exist: %s", expectedPath)
 	}
 
 	// Verify the new chart relationships file exists
-	newRelsPath := filepath.Join(updater.tempDir, "word", "charts", "_rels", "chart2.xml.rels")
+	newRelsPath := filepath.Join(updater.TempDir(), "word", "charts", "_rels", "chart2.xml.rels")
 	if _, err := os.Stat(newRelsPath); err != nil {
 		t.Errorf("New chart relationships file does not exist: %s", newRelsPath)
 	}
@@ -70,7 +72,7 @@ func TestCopyChart(t *testing.T) {
 	}
 
 	// Verify document relationships were updated
-	docRelsPath := filepath.Join(updater.tempDir, "word", "_rels", "document.xml.rels")
+	docRelsPath := filepath.Join(updater.TempDir(), "word", "_rels", "document.xml.rels")
 	docRels, err := os.ReadFile(docRelsPath)
 	if err != nil {
 		t.Fatalf("Failed to read document.xml.rels: %v", err)
@@ -81,7 +83,7 @@ func TestCopyChart(t *testing.T) {
 	}
 
 	// Verify Content_Types.xml was updated
-	contentTypesPath := filepath.Join(updater.tempDir, "[Content_Types].xml")
+	contentTypesPath := filepath.Join(updater.TempDir(), "[Content_Types].xml")
 	contentTypes, err := os.ReadFile(contentTypesPath)
 	if err != nil {
 		t.Fatalf("Failed to read [Content_Types].xml: %v", err)
@@ -92,7 +94,7 @@ func TestCopyChart(t *testing.T) {
 	}
 
 	// Save to verify the document is valid
-	outputPath := "../test_chart_copy_output.docx"
+	outputPath := "../outputs/test_chart_copy_output.docx"
 	if err := updater.Save(outputPath); err != nil {
 		t.Fatalf("Failed to save output DOCX: %v", err)
 	}
@@ -103,19 +105,19 @@ func TestCopyChart(t *testing.T) {
 }
 
 func TestCopyChartMultipleTimes(t *testing.T) {
-	testDocx := "../docx_template.docx"
+	testDocx := "../templates/docx_template.docx"
 	if _, err := os.Stat(testDocx); err != nil {
 		t.Skipf("Test DOCX not found: %s", testDocx)
 	}
 
-	updater, err := New(testDocx)
+	updater, err := docxchartupdater.New(testDocx)
 	if err != nil {
 		t.Fatalf("Failed to open test DOCX: %v", err)
 	}
 	defer updater.Cleanup()
 
 	// Read document to find insertion marker
-	docPath := filepath.Join(updater.tempDir, "word", "document.xml")
+	docPath := filepath.Join(updater.TempDir(), "word", "document.xml")
 	docContent, err := os.ReadFile(docPath)
 	if err != nil {
 		t.Fatalf("Failed to read document.xml: %v", err)
@@ -136,7 +138,7 @@ func TestCopyChartMultipleTimes(t *testing.T) {
 	}
 
 	// Verify we now have charts 1, 2, 3, 4
-	chartsDir := filepath.Join(updater.tempDir, "word", "charts")
+	chartsDir := filepath.Join(updater.TempDir(), "word", "charts")
 	for i := 1; i <= 4; i++ {
 		expectedPath := filepath.Join(chartsDir, "chart1.xml")
 		if i > 1 {
@@ -163,7 +165,7 @@ func TestCopyChartMultipleTimes(t *testing.T) {
 	}
 
 	// Save the result
-	outputPath := "../test_multiple_charts_output.docx"
+	outputPath := "../outputs/test_multiple_charts_output.docx"
 	if err := updater.Save(outputPath); err != nil {
 		t.Fatalf("Failed to save output DOCX: %v", err)
 	}
@@ -173,12 +175,12 @@ func TestCopyChartMultipleTimes(t *testing.T) {
 }
 
 func TestCopyChartInvalidSource(t *testing.T) {
-	testDocx := "../docx_template.docx"
+	testDocx := "../templates/docx_template.docx"
 	if _, err := os.Stat(testDocx); err != nil {
 		t.Skipf("Test DOCX not found: %s", testDocx)
 	}
 
-	updater, err := New(testDocx)
+	updater, err := docxchartupdater.New(testDocx)
 	if err != nil {
 		t.Fatalf("Failed to open test DOCX: %v", err)
 	}
@@ -192,12 +194,12 @@ func TestCopyChartInvalidSource(t *testing.T) {
 }
 
 func TestCopyChartIgnoresMarker(t *testing.T) {
-	testDocx := "../docx_template.docx"
+	testDocx := "../templates/docx_template.docx"
 	if _, err := os.Stat(testDocx); err != nil {
 		t.Skipf("Test DOCX not found: %s", testDocx)
 	}
 
-	updater, err := New(testDocx)
+	updater, err := docxchartupdater.New(testDocx)
 	if err != nil {
 		t.Fatalf("Failed to open test DOCX: %v", err)
 	}

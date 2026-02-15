@@ -1,4 +1,5 @@
 templates/
+outputs/
 *.log
 *.tmp
 *.bak
@@ -21,3 +22,10 @@ templates/
 *.bin
 *.iso
 *.img
+
+# Example binaries (Linux/macOS)
+example_multi_subsystem
+example_with_template
+test_10_rows
+test_copy_no_update
+test_simple_copy

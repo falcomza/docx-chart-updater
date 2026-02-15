@@ -1,21 +1,23 @@
-package docxchartupdater
+package docxchartupdater_test
 
 import (
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	docxchartupdater "github.com/falcomza/docx-chart-updater/src"
 )
 
 // Verifies that when updating a copied chart with fewer series than the template,
 // extra <c:ser> elements are removed from chartN.xml
 func TestUpdateDropsExtraSeries(t *testing.T) {
-	tpl := "../docx_output_10_rows.docx"
+	tpl := "../templates/docx_output_10_rows.docx"
 	if _, err := os.Stat(tpl); err != nil {
 		t.Skip("template not present: " + tpl)
 	}
 
-	u, err := New(tpl)
+	u, err := docxchartupdater.New(tpl)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -28,9 +30,9 @@ func TestUpdateDropsExtraSeries(t *testing.T) {
 	}
 
 	// Update with a single series, while the template has >= 2
-	data := ChartData{
+	data := docxchartupdater.ChartData{
 		Categories: []string{"A", "B", "C"},
-		Series: []SeriesData{{
+		Series: []docxchartupdater.SeriesData{{
 			Name:   "Only",
 			Values: []float64{1, 2, 3},
 		}},
@@ -40,7 +42,7 @@ func TestUpdateDropsExtraSeries(t *testing.T) {
 	}
 
 	// Inspect chartN.xml to ensure there is only one <ser>
-	chartPath := filepath.Join(u.tempDir, "word", "charts", 
+	chartPath := filepath.Join(u.TempDir(), "word", "charts", 
 								  "chart"+strconvItoa(newIdx)+".xml")
 	b, err := os.ReadFile(chartPath)
 	if err != nil {

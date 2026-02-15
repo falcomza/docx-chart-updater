@@ -30,11 +30,26 @@ func New(docxPath string) (*Updater, error) {
 	}
 
 	if err := extractZip(docxPath, tempDir); err != nil {
-		os.RemoveAll(tempDir)
+		if rmErr := os.RemoveAll(tempDir); rmErr != nil {
+			return nil, fmt.Errorf("extract docx: %w (cleanup failed: %v)", err, rmErr)
+		}
 		return nil, fmt.Errorf("extract docx: %w", err)
 	}
 
-	return &Updater{originalPath: docxPath, tempDir: tempDir}, nil
+	u := &Updater{originalPath: docxPath, tempDir: tempDir}
+
+	// Validate DOCX structure
+	if err := u.validateStructure(); err != nil {
+		u.Cleanup()
+		return nil, fmt.Errorf("invalid DOCX: %w", err)
+	}
+
+	return u, nil
+}
+
+// TempDir returns the temporary directory where the DOCX was extracted.
+func (u *Updater) TempDir() string {
+	return u.tempDir
 }
 
 // Cleanup removes temporary workspace.
@@ -205,4 +220,20 @@ func findRelationshipTarget(relsPath, relationshipID string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("relationship %s not found", relationshipID)
+}
+
+// validateStructure checks that required OpenXML parts exist.
+func (u *Updater) validateStructure() error {
+	required := []string{
+		"word/document.xml",
+		"word/_rels/document.xml.rels",
+		"[Content_Types].xml",
+	}
+	for _, path := range required {
+		fullPath := filepath.Join(u.tempDir, path)
+		if _, err := os.Stat(fullPath); err != nil {
+			return fmt.Errorf("missing required file %s", path)
+		}
+	}
+	return nil
 }
