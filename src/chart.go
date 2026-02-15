@@ -43,6 +43,9 @@ type ChartOptions struct {
 	// Chart dimensions (default: spans between margins)
 	Width  int // Width in EMUs (English Metric Units), 0 for default (6099523 = ~6.5")
 	Height int // Height in EMUs, 0 for default (3340467 = ~3.5")
+
+	// Caption options (nil for no caption)
+	Caption *CaptionOptions
 }
 
 // InsertChart creates a new chart and inserts it into the document
@@ -557,23 +560,43 @@ func (u *Updater) insertChartDrawing(chartIndex int, relID string, opts ChartOpt
 		return fmt.Errorf("generate drawing xml: %w", err)
 	}
 
+	// Handle caption if specified
+	contentToInsert := drawingXML
+	if opts.Caption != nil {
+		// Validate caption options
+		if err := ValidateCaptionOptions(opts.Caption); err != nil {
+			return fmt.Errorf("invalid caption options: %w", err)
+		}
+
+		// Set caption type to Figure if not already set
+		if opts.Caption.Type == "" {
+			opts.Caption.Type = CaptionFigure
+		}
+
+		// Generate caption XML
+		captionXML := generateCaptionXML(*opts.Caption)
+
+		// Combine chart and caption based on position
+		contentToInsert = insertCaptionWithElement(raw, captionXML, drawingXML, opts.Caption.Position)
+	}
+
 	// Insert based on position
 	var updated []byte
 	switch opts.Position {
 	case PositionBeginning:
-		updated, err = insertAtBodyStart(raw, drawingXML)
+		updated, err = insertAtBodyStart(raw, contentToInsert)
 	case PositionEnd:
-		updated, err = insertAtBodyEnd(raw, drawingXML)
+		updated, err = insertAtBodyEnd(raw, contentToInsert)
 	case PositionAfterText:
 		if opts.Anchor == "" {
 			return fmt.Errorf("anchor text required for PositionAfterText")
 		}
-		updated, err = insertAfterText(raw, drawingXML, opts.Anchor)
+		updated, err = insertAfterText(raw, contentToInsert, opts.Anchor)
 	case PositionBeforeText:
 		if opts.Anchor == "" {
 			return fmt.Errorf("anchor text required for PositionBeforeText")
 		}
-		updated, err = insertBeforeText(raw, drawingXML, opts.Anchor)
+		updated, err = insertBeforeText(raw, contentToInsert, opts.Anchor)
 	default:
 		return fmt.Errorf("invalid insert position")
 	}

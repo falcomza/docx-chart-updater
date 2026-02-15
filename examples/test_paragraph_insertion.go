@@ -10,7 +10,7 @@ import (
 
 func main() {
 	fmt.Println("Testing paragraph insertion on docx_template.docx...")
-	
+
 	// Open the template
 	u, err := updater.New("templates/docx_template.docx")
 	if err != nil {
@@ -52,10 +52,10 @@ func main() {
 			Position: updater.PositionEnd,
 		},
 		{
-			Text:     "Key Highlights:",
-			Style:    updater.StyleNormal,
-			Position: updater.PositionEnd,
-			Bold:     true,
+			Text:      "Key Highlights:",
+			Style:     updater.StyleNormal,
+			Position:  updater.PositionEnd,
+			Bold:      true,
 			Underline: true,
 		},
 		{

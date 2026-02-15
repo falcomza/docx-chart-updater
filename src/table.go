@@ -118,6 +118,9 @@ type TableOptions struct {
 
 	// Border properties
 	BorderStyle BorderStyle // Border style
+
+	// Caption options (nil for no caption)
+	Caption *CaptionOptions
 	BorderSize  int         // Border width in eighths of a point (default: 4 = 0.5pt)
 	BorderColor string      // Hex color for borders (default: "000000")
 
@@ -521,21 +524,41 @@ func generateCell(content string, align CellAlignment, vAlign VerticalAlignment,
 
 // insertTableAtPosition inserts the table XML at the specified position
 func insertTableAtPosition(docXML, tableXML []byte, opts TableOptions) ([]byte, error) {
+	// Handle caption if specified
+	contentToInsert := tableXML
+	if opts.Caption != nil {
+		// Validate caption options
+		if err := ValidateCaptionOptions(opts.Caption); err != nil {
+			return nil, fmt.Errorf("invalid caption options: %w", err)
+		}
+
+		// Set caption type to Table if not already set
+		if opts.Caption.Type == "" {
+			opts.Caption.Type = CaptionTable
+		}
+
+		// Generate caption XML
+		captionXML := generateCaptionXML(*opts.Caption)
+
+		// Combine table and caption based on position
+		contentToInsert = insertCaptionWithElement(docXML, captionXML, tableXML, opts.Caption.Position)
+	}
+
 	switch opts.Position {
 	case PositionBeginning:
-		return insertAtBodyStart(docXML, tableXML)
+		return insertAtBodyStart(docXML, contentToInsert)
 	case PositionEnd:
-		return insertAtBodyEnd(docXML, tableXML)
+		return insertAtBodyEnd(docXML, contentToInsert)
 	case PositionAfterText:
 		if opts.Anchor == "" {
 			return nil, fmt.Errorf("anchor text required for PositionAfterText")
 		}
-		return insertAfterText(docXML, tableXML, opts.Anchor)
+		return insertAfterText(docXML, contentToInsert, opts.Anchor)
 	case PositionBeforeText:
 		if opts.Anchor == "" {
 			return nil, fmt.Errorf("anchor text required for PositionBeforeText")
 		}
-		return insertBeforeText(docXML, tableXML, opts.Anchor)
+		return insertBeforeText(docXML, contentToInsert, opts.Anchor)
 	default:
 		return nil, fmt.Errorf("invalid insert position")
 	}

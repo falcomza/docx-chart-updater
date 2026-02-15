@@ -72,7 +72,7 @@ func main() {
 			{"C003", "⊗ Inactive"},
 		},
 		TableWidthType:    docxupdater.TableWidthPercentage,
-		TableWidth:        2500,                               // 50% (5000 = 100%)
+		TableWidth:        2500, // 50% (5000 = 100%)
 		HeaderBold:        true,
 		HeaderBackground:  "70AD47",
 		HeaderAlignment:   docxupdater.CellAlignCenter,
@@ -108,7 +108,7 @@ func main() {
 			{"Q3 2026", "$310,000", "+18%"},
 		},
 		TableWidthType:    docxupdater.TableWidthPercentage,
-		TableWidth:        3750,                               // 75% (5000 = 100%)
+		TableWidth:        3750, // 75% (5000 = 100%)
 		HeaderBold:        true,
 		HeaderBackground:  "2E75B5",
 		HeaderAlignment:   docxupdater.CellAlignCenter,
@@ -141,7 +141,7 @@ func main() {
 			{"Jane Smith", "jane@example.com"},
 		},
 		TableWidthType:    docxupdater.TableWidthFixed,
-		TableWidth:        7200,                               // 5 inches
+		TableWidth:        7200, // 5 inches
 		HeaderBold:        true,
 		HeaderBackground:  "C65911",
 		HeaderAlignment:   docxupdater.CellAlignCenter,

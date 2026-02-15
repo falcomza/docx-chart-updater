@@ -16,8 +16,8 @@ func main() {
 
 	// Example 1: Basic sales chart
 	err = u.InsertChart(docxupdater.ChartOptions{
-		Position: docxupdater.PositionEnd,
-		Title:    "Quarterly Sales Report 2024",
+		Position:   docxupdater.PositionEnd,
+		Title:      "Quarterly Sales Report 2024",
 		Categories: []string{"Q1", "Q2", "Q3", "Q4"},
 		Series: []docxupdater.SeriesData{
 			{Name: "Revenue", Values: []float64{250000, 280000, 310000, 290000}},
@@ -74,7 +74,7 @@ func main() {
 		Series: []docxupdater.SeriesData{
 			{Name: "Sales", Values: []float64{150, 200, 175}},
 		},
-		ShowLegend: false, // No legend for single series
+		ShowLegend: false,   // No legend for single series
 		Width:      5486400, // ~6 inches
 		Height:     3048000, // ~3.3 inches
 	})

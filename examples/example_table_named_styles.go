@@ -43,8 +43,8 @@ func main() {
 			{"Consistency", "Maintains corporate style guidelines"},
 			{"Template-based", "Styles can be customized in the template"},
 		},
-		HeaderStyleName:   "Heading2",                            // Word's Heading 2 style
-		RowStyleName:      "BodyText",                            // Word's Body Text style
+		HeaderStyleName:   "Heading2", // Word's Heading 2 style
+		RowStyleName:      "BodyText", // Word's Body Text style
 		HeaderBackground:  "4472C4",
 		AlternateRowColor: "E7E6E6",
 		BorderStyle:       docxupdater.BorderSingle,
@@ -77,12 +77,12 @@ func main() {
 			{"Q3 2026", "$310,000", "+18%"},
 			{"Q4 2026", "$340,000", "+21%"},
 		},
-		HeaderStyleName:   "Heading3",                            // Named style
-		HeaderBold:        true,                                  // Plus direct bold
-		HeaderBackground:  "2E75B5",                              // Plus direct background
-		HeaderAlignment:   docxupdater.CellAlignCenter,
-		RowStyleName:      "Normal",                              // Named style
-		RowStyle: docxupdater.CellStyle{                     // Plus direct formatting
+		HeaderStyleName:  "Heading3", // Named style
+		HeaderBold:       true,       // Plus direct bold
+		HeaderBackground: "2E75B5",   // Plus direct background
+		HeaderAlignment:  docxupdater.CellAlignCenter,
+		RowStyleName:     "Normal", // Named style
+		RowStyle: docxupdater.CellStyle{ // Plus direct formatting
 			FontSize: 20, // 10pt
 		},
 		AlternateRowColor: "DEEBF7",
@@ -115,8 +115,8 @@ func main() {
 			{"Bob Smith", "Marketing", "Active"},
 			{"Carol White", "Sales", "Active"},
 		},
-		HeaderStyleName:   "Heading1",                            // Heading style for header
-		RowStyleName:      "Normal",                              // Most commonly used
+		HeaderStyleName:   "Heading1", // Heading style for header
+		RowStyleName:      "Normal",   // Most commonly used
 		HeaderBold:        true,
 		HeaderBackground:  "70AD47",
 		HeaderAlignment:   docxupdater.CellAlignCenter,
@@ -185,8 +185,8 @@ func main() {
 			{"Custom Body", "CompanyBody (if defined)"},
 			{"Table Style", "Can also use table-specific styles"},
 		},
-		HeaderStyleName:   "CompanyHeader",                       // Custom style (if exists)
-		RowStyleName:      "CompanyBody",                         // Custom style (if exists)
+		HeaderStyleName:   "CompanyHeader", // Custom style (if exists)
+		RowStyleName:      "CompanyBody",   // Custom style (if exists)
 		HeaderBackground:  "7030A0",
 		AlternateRowColor: "E9D8F4",
 		BorderStyle:       docxupdater.BorderSingle,

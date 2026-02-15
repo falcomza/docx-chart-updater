@@ -590,9 +590,9 @@ func TestInsertTableWithNamedStyles(t *testing.T) {
 			{"Data 1", "Data 2"},
 			{"Data 3", "Data 4"},
 		},
-		HeaderStyleName: "Heading1",           // Word style for header
-		RowStyleName:    "BodyText",           // Word style for data rows
-		HeaderBold:      true,
+		HeaderStyleName:  "Heading1", // Word style for header
+		RowStyleName:     "BodyText", // Word style for data rows
+		HeaderBold:       true,
 		HeaderBackground: "4472C4",
 	})
 	if err != nil {
@@ -637,11 +637,11 @@ func TestInsertTableMixedDirectAndNamedStyles(t *testing.T) {
 		Rows: [][]string{
 			{"Data 1", "Data 2"},
 		},
-		HeaderStyleName: "Heading2",           // Named style
-		HeaderBold:      true,                 // Plus direct formatting
+		HeaderStyleName:  "Heading2", // Named style
+		HeaderBold:       true,       // Plus direct formatting
 		HeaderBackground: "70AD47",
-		RowStyleName:    "Normal",             // Named style for rows
-		RowStyle: docxupdater.CellStyle{  // Plus direct formatting
+		RowStyleName:     "Normal", // Named style for rows
+		RowStyle: docxupdater.CellStyle{ // Plus direct formatting
 			FontSize: 20, // 10pt
 		},
 	})

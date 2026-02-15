@@ -27,8 +27,8 @@ func TestInsertBasicChart(t *testing.T) {
 
 	// Create a basic column chart
 	err = u.InsertChart(docxupdater.ChartOptions{
-		Position: docxupdater.PositionEnd,
-		Title:    "Sales Report",
+		Position:   docxupdater.PositionEnd,
+		Title:      "Sales Report",
 		Categories: []string{"Q1", "Q2", "Q3", "Q4"},
 		Series: []docxupdater.SeriesData{
 			{Name: "Revenue", Values: []float64{100, 150, 120, 180}},
@@ -47,12 +47,12 @@ func TestInsertBasicChart(t *testing.T) {
 	// List all files in output
 	entries := listZipEntries(t, outputPath)
 	t.Logf("Files in output: %v", entries)
-	
+
 	// Find which chart was created
 	var chartFile string
 	for _, entry := range entries {
 		if strings.HasPrefix(entry, "word/charts/chart") && strings.HasSuffix(entry, ".xml") {
-			if strings.Contains(entry, ".rels")  {
+			if strings.Contains(entry, ".rels") {
 				continue
 			}
 			chartFile = entry

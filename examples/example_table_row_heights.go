@@ -144,9 +144,9 @@ func main() {
 			{"Q3 2026", "$310,000", "+18%"},
 			{"Q4 2026", "$340,000", "+21%"},
 		},
-		HeaderRowHeight:   900,                                  // Taller header (0.625 inch)
+		HeaderRowHeight:   900, // Taller header (0.625 inch)
 		HeaderHeightRule:  docxupdater.RowHeightExact,
-		RowHeight:         450,                                  // Shorter data rows (0.3125 inch)
+		RowHeight:         450, // Shorter data rows (0.3125 inch)
 		RowHeightRule:     docxupdater.RowHeightExact,
 		HeaderBold:        true,
 		HeaderBackground:  "C65911",
