@@ -6,7 +6,6 @@ outputs/
 *.swp
 .DS_Store
 .claude/
-!README.md
 !.gitignore
 *.md
 *.docx
@@ -29,3 +28,5 @@ example_with_template
 test_10_rows
 test_copy_no_update
 test_simple_copy
+!README.md
+!templates/docx_template.docx
