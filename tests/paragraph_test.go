@@ -1,4 +1,4 @@
-package docxchartupdater_test
+package docxupdater_test
 
 import (
 	"os"
@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	docxchartupdater "github.com/falcomza/docx-chart-updater/src"
+	docxupdater "github.com/falcomza/docx-updater/src"
 )
 
 func TestInsertParagraphAtEnd(t *testing.T) {
@@ -18,17 +18,17 @@ func TestInsertParagraphAtEnd(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
 	// Insert a paragraph at the end
-	err = u.InsertParagraph(docxchartupdater.ParagraphOptions{
+	err = u.InsertParagraph(docxupdater.ParagraphOptions{
 		Text:     "This is a test paragraph",
-		Style:    docxchartupdater.StyleNormal,
-		Position: docxchartupdater.PositionEnd,
+		Style:    docxupdater.StyleNormal,
+		Position: docxupdater.PositionEnd,
 	})
 	if err != nil {
 		t.Fatalf("InsertParagraph failed: %v", err)
@@ -54,16 +54,16 @@ func TestInsertParagraphAtBeginning(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	err = u.InsertParagraph(docxchartupdater.ParagraphOptions{
+	err = u.InsertParagraph(docxupdater.ParagraphOptions{
 		Text:     "Beginning paragraph",
-		Style:    docxchartupdater.StyleHeading1,
-		Position: docxchartupdater.PositionBeginning,
+		Style:    docxupdater.StyleHeading1,
+		Position: docxupdater.PositionBeginning,
 	})
 	if err != nil {
 		t.Fatalf("InsertParagraph failed: %v", err)
@@ -91,16 +91,16 @@ func TestInsertParagraphWithFormatting(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	err = u.InsertParagraph(docxchartupdater.ParagraphOptions{
+	err = u.InsertParagraph(docxupdater.ParagraphOptions{
 		Text:      "Bold and italic text",
-		Style:     docxchartupdater.StyleNormal,
-		Position:  docxchartupdater.PositionEnd,
+		Style:     docxupdater.StyleNormal,
+		Position:  docxupdater.PositionEnd,
 		Bold:      true,
 		Italic:    true,
 		Underline: true,
@@ -134,17 +134,17 @@ func TestAddHeading(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	if err := u.AddHeading(1, "Main Title", docxchartupdater.PositionEnd); err != nil {
+	if err := u.AddHeading(1, "Main Title", docxupdater.PositionEnd); err != nil {
 		t.Fatalf("AddHeading failed: %v", err)
 	}
 
-	if err := u.AddHeading(2, "Subtitle", docxchartupdater.PositionEnd); err != nil {
+	if err := u.AddHeading(2, "Subtitle", docxupdater.PositionEnd); err != nil {
 		t.Fatalf("AddHeading failed: %v", err)
 	}
 
@@ -170,27 +170,27 @@ func TestInsertMultipleParagraphs(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	paragraphs := []docxchartupdater.ParagraphOptions{
+	paragraphs := []docxupdater.ParagraphOptions{
 		{
 			Text:     "First paragraph",
-			Style:    docxchartupdater.StyleHeading1,
-			Position: docxchartupdater.PositionEnd,
+			Style:    docxupdater.StyleHeading1,
+			Position: docxupdater.PositionEnd,
 		},
 		{
 			Text:     "Second paragraph with details",
-			Style:    docxchartupdater.StyleNormal,
-			Position: docxchartupdater.PositionEnd,
+			Style:    docxupdater.StyleNormal,
+			Position: docxupdater.PositionEnd,
 		},
 		{
 			Text:     "Third paragraph conclusion",
-			Style:    docxchartupdater.StyleNormal,
-			Position: docxchartupdater.PositionEnd,
+			Style:    docxupdater.StyleNormal,
+			Position: docxupdater.PositionEnd,
 			Bold:     true,
 		},
 	}
@@ -219,15 +219,15 @@ func TestInsertParagraphEmptyText(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	err = u.InsertParagraph(docxchartupdater.ParagraphOptions{
+	err = u.InsertParagraph(docxupdater.ParagraphOptions{
 		Text:     "",
-		Position: docxchartupdater.PositionEnd,
+		Position: docxupdater.PositionEnd,
 	})
 	if err == nil {
 		t.Error("Expected error for empty text, got nil")

@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	updater "github.com/falcomza/docx-chart-updater/src"
+	updater "github.com/falcomza/docx-updater/src"
 )
 
 func main() {

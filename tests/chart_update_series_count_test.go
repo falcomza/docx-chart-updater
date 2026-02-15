@@ -1,4 +1,4 @@
-package docxchartupdater_test
+package docxupdater_test
 
 import (
 	"os"
@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	docxchartupdater "github.com/falcomza/docx-chart-updater/src"
+	docxupdater "github.com/falcomza/docx-updater/src"
 )
 
 // Verifies that when updating a copied chart with fewer series than the template,
@@ -17,7 +17,7 @@ func TestUpdateDropsExtraSeries(t *testing.T) {
 		t.Skip("template not present: " + tpl)
 	}
 
-	u, err := docxchartupdater.New(tpl)
+	u, err := docxupdater.New(tpl)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -30,9 +30,9 @@ func TestUpdateDropsExtraSeries(t *testing.T) {
 	}
 
 	// Update with a single series, while the template has >= 2
-	data := docxchartupdater.ChartData{
+	data := docxupdater.ChartData{
 		Categories: []string{"A", "B", "C"},
-		Series: []docxchartupdater.SeriesData{{
+		Series: []docxupdater.SeriesData{{
 			Name:   "Only",
 			Values: []float64{1, 2, 3},
 		}},

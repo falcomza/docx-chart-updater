@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	docxchartupdater "github.com/falcomza/docx-chart-updater/src"
+	docxupdater "github.com/falcomza/docx-updater/src"
 )
 
 func main() {
@@ -23,14 +23,14 @@ func main() {
 	fmt.Printf("Output file: %s\n", outputPath)
 
 	// Create updater
-	updater, err := docxchartupdater.New(inputPath)
+	updater, err := docxupdater.New(inputPath)
 	if err != nil {
 		log.Fatalf("Failed to create updater: %v", err)
 	}
 	defer updater.Cleanup()
 
 	// Create chart data with 10 rows
-	data := docxchartupdater.ChartData{
+	data := docxupdater.ChartData{
 		Categories: []string{
 			"Device 1",
 			"Device 2",
@@ -43,7 +43,7 @@ func main() {
 			"Device 9",
 			"Device 10",
 		},
-		Series: []docxchartupdater.SeriesData{
+		Series: []docxupdater.SeriesData{
 			{
 				Name: "Critical",
 				Values: []float64{

@@ -1,4 +1,4 @@
-package docxchartupdater
+package docxupdater
 
 import (
 	"strconv"

@@ -1,4 +1,4 @@
-package docxchartupdater_test
+package docxupdater_test
 
 import (
 	"archive/zip"
@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	docxchartupdater "github.com/falcomza/docx-chart-updater/src"
+	docxupdater "github.com/falcomza/docx-updater/src"
 )
 
 func TestBasicUpdate(t *testing.T) {
@@ -21,15 +21,15 @@ func TestBasicUpdate(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	data := docxchartupdater.ChartData{
+	data := docxupdater.ChartData{
 		Categories: []string{"Device A", "Device B", "Device C"},
-		Series: []docxchartupdater.SeriesData{
+		Series: []docxupdater.SeriesData{
 			{Name: "Critical", Values: []float64{4, 3, 2}},
 			{Name: "Non-critical", Values: []float64{8, 7, 6}},
 		},
@@ -70,15 +70,15 @@ func TestInvalidData(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	err = u.UpdateChart(1, docxchartupdater.ChartData{
+	err = u.UpdateChart(1, docxupdater.ChartData{
 		Categories: []string{"A", "B"},
-		Series:     []docxchartupdater.SeriesData{{Name: "Critical", Values: []float64{1}}},
+		Series:     []docxupdater.SeriesData{{Name: "Critical", Values: []float64{1}}},
 	})
 	if err == nil {
 		t.Fatalf("expected length mismatch error")
@@ -94,15 +94,15 @@ func TestUpdateWithSharedStringsWorkbook(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	data := docxchartupdater.ChartData{
+	data := docxupdater.ChartData{
 		Categories: []string{"Node 1", "Node 2"},
-		Series: []docxchartupdater.SeriesData{
+		Series: []docxupdater.SeriesData{
 			{Name: "Critical", Values: []float64{11, 9}},
 			{Name: "Non-critical", Values: []float64{22, 18}},
 		},
@@ -145,15 +145,15 @@ func TestUpdateSpecificChartInMultiChartDocx(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	data := docxchartupdater.ChartData{
+	data := docxupdater.ChartData{
 		Categories: []string{"Router A", "Router B"},
-		Series: []docxchartupdater.SeriesData{
+		Series: []docxupdater.SeriesData{
 			{Name: "Critical", Values: []float64{5, 7}},
 			{Name: "Non-critical", Values: []float64{15, 17}},
 		},

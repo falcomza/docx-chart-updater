@@ -3,23 +3,23 @@ package main
 import (
 	"log"
 
-	docxchartupdater "github.com/falcomza/docx-chart-updater/src"
+	docxupdater "github.com/falcomza/docx-updater/src"
 )
 
 func main() {
 	// Open the input document
-	u, err := docxchartupdater.New("input.docx")
+	u, err := docxupdater.New("input.docx")
 	if err != nil {
 		log.Fatalf("Failed to open document: %v", err)
 	}
 	defer u.Cleanup()
 
 	// Example 1: Basic sales chart
-	err = u.InsertChart(docxchartupdater.ChartOptions{
-		Position: docxchartupdater.PositionEnd,
+	err = u.InsertChart(docxupdater.ChartOptions{
+		Position: docxupdater.PositionEnd,
 		Title:    "Quarterly Sales Report 2024",
 		Categories: []string{"Q1", "Q2", "Q3", "Q4"},
-		Series: []docxchartupdater.SeriesData{
+		Series: []docxupdater.SeriesData{
 			{Name: "Revenue", Values: []float64{250000, 280000, 310000, 290000}},
 			{Name: "Profit", Values: []float64{50000, 62000, 68000, 64000}},
 		},
@@ -30,13 +30,13 @@ func main() {
 	}
 
 	// Example 2: Chart with axis titles
-	err = u.InsertChart(docxchartupdater.ChartOptions{
-		Position:          docxchartupdater.PositionEnd,
+	err = u.InsertChart(docxupdater.ChartOptions{
+		Position:          docxupdater.PositionEnd,
 		Title:             "Website Traffic Analysis",
 		CategoryAxisTitle: "Month",
 		ValueAxisTitle:    "Visitors (thousands)",
 		Categories:        []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun"},
-		Series: []docxchartupdater.SeriesData{
+		Series: []docxupdater.SeriesData{
 			{Name: "Unique Visitors", Values: []float64{45, 52, 58, 61, 65, 70}},
 			{Name: "Page Views", Values: []float64{180, 220, 240, 255, 275, 295}},
 		},
@@ -48,13 +48,13 @@ func main() {
 	}
 
 	// Example 3: Multi-series financial chart
-	err = u.InsertChart(docxchartupdater.ChartOptions{
-		Position:          docxchartupdater.PositionEnd,
+	err = u.InsertChart(docxupdater.ChartOptions{
+		Position:          docxupdater.PositionEnd,
 		Title:             "Financial Performance",
 		CategoryAxisTitle: "Period",
 		ValueAxisTitle:    "Amount (USD)",
 		Categories:        []string{"Jan", "Feb", "Mar", "Apr"},
-		Series: []docxchartupdater.SeriesData{
+		Series: []docxupdater.SeriesData{
 			{Name: "Revenue", Values: []float64{100000, 120000, 115000, 130000}},
 			{Name: "Costs", Values: []float64{60000, 70000, 65000, 75000}},
 			{Name: "Profit", Values: []float64{40000, 50000, 50000, 55000}},
@@ -67,11 +67,11 @@ func main() {
 	}
 
 	// Example 4: Chart with custom dimensions
-	err = u.InsertChart(docxchartupdater.ChartOptions{
-		Position:   docxchartupdater.PositionEnd,
+	err = u.InsertChart(docxupdater.ChartOptions{
+		Position:   docxupdater.PositionEnd,
 		Title:      "Product Comparison",
 		Categories: []string{"Product A", "Product B", "Product C"},
-		Series: []docxchartupdater.SeriesData{
+		Series: []docxupdater.SeriesData{
 			{Name: "Sales", Values: []float64{150, 200, 175}},
 		},
 		ShowLegend: false, // No legend for single series

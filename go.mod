@@ -1,3 +1,3 @@
-module github.com/falcomza/docx-chart-updater
+module github.com/falcomza/docx-updater
 
 go 1.23

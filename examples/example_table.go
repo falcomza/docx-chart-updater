@@ -5,28 +5,28 @@ import (
 	"log"
 	"time"
 
-	docxchartupdater "github.com/falcomza/docx-chart-updater/src"
+	docxupdater "github.com/falcomza/docx-updater/src"
 )
 
 func main() {
 	// Open the template document
-	updater, err := docxchartupdater.New("./templates/docx_template.docx")
+	updater, err := docxupdater.New("./templates/docx_template.docx")
 	if err != nil {
 		log.Fatalf("Failed to open template: %v", err)
 	}
 	defer updater.Cleanup()
 
 	// Add a title for the report
-	err = updater.AddHeading(1, "Monthly Sales Report - "+time.Now().Format("January 2006"), docxchartupdater.PositionEnd)
+	err = updater.AddHeading(1, "Monthly Sales Report - "+time.Now().Format("January 2006"), docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add title: %v", err)
 	}
 
 	// Add subtitle
-	err = updater.InsertParagraph(docxchartupdater.ParagraphOptions{
+	err = updater.InsertParagraph(docxupdater.ParagraphOptions{
 		Text:     "Generated on: " + time.Now().Format("January 2, 2006"),
-		Style:    docxchartupdater.StyleSubtitle,
-		Position: docxchartupdater.PositionEnd,
+		Style:    docxupdater.StyleSubtitle,
+		Position: docxupdater.PositionEnd,
 		Italic:   true,
 	})
 	if err != nil {
@@ -34,21 +34,21 @@ func main() {
 	}
 
 	// Add section heading
-	err = updater.AddHeading(2, "Sales by Region", docxchartupdater.PositionEnd)
+	err = updater.AddHeading(2, "Sales by Region", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add section heading: %v", err)
 	}
 
 	// Create a professional sales table
-	err = updater.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
-			{Title: "Region", Alignment: docxchartupdater.CellAlignLeft},
-			{Title: "Q1 Sales", Alignment: docxchartupdater.CellAlignRight},
-			{Title: "Q2 Sales", Alignment: docxchartupdater.CellAlignRight},
-			{Title: "Q3 Sales", Alignment: docxchartupdater.CellAlignRight},
-			{Title: "Q4 Sales", Alignment: docxchartupdater.CellAlignRight},
-			{Title: "Total", Alignment: docxchartupdater.CellAlignRight},
+	err = updater.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
+			{Title: "Region", Alignment: docxupdater.CellAlignLeft},
+			{Title: "Q1 Sales", Alignment: docxupdater.CellAlignRight},
+			{Title: "Q2 Sales", Alignment: docxupdater.CellAlignRight},
+			{Title: "Q3 Sales", Alignment: docxupdater.CellAlignRight},
+			{Title: "Q4 Sales", Alignment: docxupdater.CellAlignRight},
+			{Title: "Total", Alignment: docxupdater.CellAlignRight},
 		},
 		Rows: [][]string{
 			{"North America", "$125,000", "$132,000", "$145,000", "$158,000", "$560,000"},
@@ -59,14 +59,14 @@ func main() {
 		},
 		HeaderBold:        true,
 		HeaderBackground:  "2E75B5",
-		HeaderAlignment:   docxchartupdater.CellAlignCenter,
+		HeaderAlignment:   docxupdater.CellAlignCenter,
 		AlternateRowColor: "E7E6E6",
-		BorderStyle:       docxchartupdater.BorderSingle,
+		BorderStyle:       docxupdater.BorderSingle,
 		BorderSize:        6,
 		BorderColor:       "2E75B5",
-		TableAlignment:    docxchartupdater.AlignCenter,
+		TableAlignment:    docxupdater.AlignCenter,
 		RepeatHeader:      true,
-		RowStyle: docxchartupdater.CellStyle{
+		RowStyle: docxupdater.CellStyle{
 			FontSize: 20, // 10pt
 		},
 	})
@@ -75,21 +75,21 @@ func main() {
 	}
 
 	// Add another section
-	err = updater.AddHeading(2, "Top Performers", docxchartupdater.PositionEnd)
+	err = updater.AddHeading(2, "Top Performers", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add performers heading: %v", err)
 	}
 
 	// Create employee performance table
-	err = updater.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
-			{Title: "Rank", Alignment: docxchartupdater.CellAlignCenter},
-			{Title: "Employee Name", Alignment: docxchartupdater.CellAlignLeft},
-			{Title: "Department", Alignment: docxchartupdater.CellAlignLeft},
-			{Title: "Sales", Alignment: docxchartupdater.CellAlignRight},
-			{Title: "Target", Alignment: docxchartupdater.CellAlignRight},
-			{Title: "Achievement", Alignment: docxchartupdater.CellAlignCenter},
+	err = updater.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
+			{Title: "Rank", Alignment: docxupdater.CellAlignCenter},
+			{Title: "Employee Name", Alignment: docxupdater.CellAlignLeft},
+			{Title: "Department", Alignment: docxupdater.CellAlignLeft},
+			{Title: "Sales", Alignment: docxupdater.CellAlignRight},
+			{Title: "Target", Alignment: docxupdater.CellAlignRight},
+			{Title: "Achievement", Alignment: docxupdater.CellAlignCenter},
 		},
 		ColumnWidths: []int{600, 2000, 1500, 1200, 1200, 1000}, // Custom widths
 		Rows: [][]string{
@@ -101,12 +101,12 @@ func main() {
 		},
 		HeaderBold:        true,
 		HeaderBackground:  "4472C4",
-		HeaderAlignment:   docxchartupdater.CellAlignCenter,
+		HeaderAlignment:   docxupdater.CellAlignCenter,
 		AlternateRowColor: "DEEBF7",
-		BorderStyle:       docxchartupdater.BorderSingle,
+		BorderStyle:       docxupdater.BorderSingle,
 		BorderSize:        4,
-		TableAlignment:    docxchartupdater.AlignCenter,
-		RowStyle: docxchartupdater.CellStyle{
+		TableAlignment:    docxupdater.AlignCenter,
+		RowStyle: docxupdater.CellStyle{
 			FontSize: 20,
 		},
 	})
@@ -115,20 +115,20 @@ func main() {
 	}
 
 	// Add product inventory section
-	err = updater.AddHeading(2, "Product Inventory Status", docxchartupdater.PositionEnd)
+	err = updater.AddHeading(2, "Product Inventory Status", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add inventory heading: %v", err)
 	}
 
 	// Create inventory table with custom styling
-	err = updater.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
-			{Title: "Product Code", Alignment: docxchartupdater.CellAlignLeft},
-			{Title: "Product Name", Alignment: docxchartupdater.CellAlignLeft},
-			{Title: "Category", Alignment: docxchartupdater.CellAlignLeft},
-			{Title: "In Stock", Alignment: docxchartupdater.CellAlignRight},
-			{Title: "Status", Alignment: docxchartupdater.CellAlignCenter},
+	err = updater.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
+			{Title: "Product Code", Alignment: docxupdater.CellAlignLeft},
+			{Title: "Product Name", Alignment: docxupdater.CellAlignLeft},
+			{Title: "Category", Alignment: docxupdater.CellAlignLeft},
+			{Title: "In Stock", Alignment: docxupdater.CellAlignRight},
+			{Title: "Status", Alignment: docxupdater.CellAlignCenter},
 		},
 		Rows: [][]string{
 			{"PRD-001", "Wireless Mouse", "Electronics", "245", "✓ Available"},
@@ -142,12 +142,12 @@ func main() {
 		},
 		HeaderBold:        true,
 		HeaderBackground:  "70AD47",
-		HeaderAlignment:   docxchartupdater.CellAlignCenter,
+		HeaderAlignment:   docxupdater.CellAlignCenter,
 		AlternateRowColor: "E2EFD9",
-		BorderStyle:       docxchartupdater.BorderSingle,
+		BorderStyle:       docxupdater.BorderSingle,
 		BorderSize:        6,
 		BorderColor:       "70AD47",
-		TableAlignment:    docxchartupdater.AlignCenter,
+		TableAlignment:    docxupdater.AlignCenter,
 		RepeatHeader:      true,
 	})
 	if err != nil {
@@ -155,15 +155,15 @@ func main() {
 	}
 
 	// Add footer note
-	err = updater.AddText("──────────────────────────────────────────────────────────", docxchartupdater.PositionEnd)
+	err = updater.AddText("──────────────────────────────────────────────────────────", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add separator: %v", err)
 	}
 
-	err = updater.InsertParagraph(docxchartupdater.ParagraphOptions{
+	err = updater.InsertParagraph(docxupdater.ParagraphOptions{
 		Text:     "Note: All figures are in USD. Report generated automatically by the sales tracking system.",
-		Style:    docxchartupdater.StyleNormal,
-		Position: docxchartupdater.PositionEnd,
+		Style:    docxupdater.StyleNormal,
+		Position: docxupdater.PositionEnd,
 		Italic:   true,
 	})
 	if err != nil {

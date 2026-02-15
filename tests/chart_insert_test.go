@@ -1,4 +1,4 @@
-package docxchartupdater_test
+package docxupdater_test
 
 import (
 	"archive/zip"
@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	docxchartupdater "github.com/falcomza/docx-chart-updater/src"
+	docxupdater "github.com/falcomza/docx-updater/src"
 )
 
 func TestInsertBasicChart(t *testing.T) {
@@ -19,18 +19,18 @@ func TestInsertBasicChart(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
 	// Create a basic column chart
-	err = u.InsertChart(docxchartupdater.ChartOptions{
-		Position: docxchartupdater.PositionEnd,
+	err = u.InsertChart(docxupdater.ChartOptions{
+		Position: docxupdater.PositionEnd,
 		Title:    "Sales Report",
 		Categories: []string{"Q1", "Q2", "Q3", "Q4"},
-		Series: []docxchartupdater.SeriesData{
+		Series: []docxupdater.SeriesData{
 			{Name: "Revenue", Values: []float64{100, 150, 120, 180}},
 			{Name: "Profit", Values: []float64{20, 30, 25, 40}},
 		},
@@ -103,19 +103,19 @@ func TestInsertChartWithAxisTitles(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	err = u.InsertChart(docxchartupdater.ChartOptions{
-		Position:          docxchartupdater.PositionEnd,
+	err = u.InsertChart(docxupdater.ChartOptions{
+		Position:          docxupdater.PositionEnd,
 		Title:             "Performance Metrics",
 		CategoryAxisTitle: "Time Period",
 		ValueAxisTitle:    "Value (USD)",
 		Categories:        []string{"Jan", "Feb", "Mar"},
-		Series: []docxchartupdater.SeriesData{
+		Series: []docxupdater.SeriesData{
 			{Name: "Sales", Values: []float64{1000, 1200, 1500}},
 		},
 		ShowLegend: true,
@@ -146,18 +146,18 @@ func TestInsertMultipleCharts(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
 	// Insert first chart
-	err = u.InsertChart(docxchartupdater.ChartOptions{
-		Position:   docxchartupdater.PositionEnd,
+	err = u.InsertChart(docxupdater.ChartOptions{
+		Position:   docxupdater.PositionEnd,
 		Title:      "Chart 1",
 		Categories: []string{"A", "B"},
-		Series: []docxchartupdater.SeriesData{
+		Series: []docxupdater.SeriesData{
 			{Name: "Series1", Values: []float64{10, 20}},
 		},
 		ShowLegend: true,
@@ -167,11 +167,11 @@ func TestInsertMultipleCharts(t *testing.T) {
 	}
 
 	// Insert second chart
-	err = u.InsertChart(docxchartupdater.ChartOptions{
-		Position:   docxchartupdater.PositionEnd,
+	err = u.InsertChart(docxupdater.ChartOptions{
+		Position:   docxupdater.PositionEnd,
 		Title:      "Chart 2",
 		Categories: []string{"X", "Y"},
-		Series: []docxchartupdater.SeriesData{
+		Series: []docxupdater.SeriesData{
 			{Name: "Series2", Values: []float64{30, 40}},
 		},
 		ShowLegend: true,
@@ -204,17 +204,17 @@ func TestInsertChartInvalidData(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
 	// Test empty categories
-	err = u.InsertChart(docxchartupdater.ChartOptions{
-		Position:   docxchartupdater.PositionEnd,
+	err = u.InsertChart(docxupdater.ChartOptions{
+		Position:   docxupdater.PositionEnd,
 		Categories: []string{},
-		Series: []docxchartupdater.SeriesData{
+		Series: []docxupdater.SeriesData{
 			{Name: "Test", Values: []float64{}},
 		},
 	})
@@ -223,20 +223,20 @@ func TestInsertChartInvalidData(t *testing.T) {
 	}
 
 	// Test empty series
-	err = u.InsertChart(docxchartupdater.ChartOptions{
-		Position:   docxchartupdater.PositionEnd,
+	err = u.InsertChart(docxupdater.ChartOptions{
+		Position:   docxupdater.PositionEnd,
 		Categories: []string{"A", "B"},
-		Series:     []docxchartupdater.SeriesData{},
+		Series:     []docxupdater.SeriesData{},
 	})
 	if err == nil {
 		t.Error("Expected error for empty series")
 	}
 
 	// Test mismatched values length
-	err = u.InsertChart(docxchartupdater.ChartOptions{
-		Position:   docxchartupdater.PositionEnd,
+	err = u.InsertChart(docxupdater.ChartOptions{
+		Position:   docxupdater.PositionEnd,
 		Categories: []string{"A", "B", "C"},
-		Series: []docxchartupdater.SeriesData{
+		Series: []docxupdater.SeriesData{
 			{Name: "Test", Values: []float64{1, 2}}, // Only 2 values, but 3 categories
 		},
 	})
@@ -254,19 +254,19 @@ func TestInsertChartMultipleSeries(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	err = u.InsertChart(docxchartupdater.ChartOptions{
-		Position:          docxchartupdater.PositionEnd,
+	err = u.InsertChart(docxupdater.ChartOptions{
+		Position:          docxupdater.PositionEnd,
 		Title:             "Sales vs Costs",
 		CategoryAxisTitle: "Month",
 		ValueAxisTitle:    "Amount",
 		Categories:        []string{"Jan", "Feb", "Mar", "Apr"},
-		Series: []docxchartupdater.SeriesData{
+		Series: []docxupdater.SeriesData{
 			{Name: "Revenue", Values: []float64{1000, 1200, 1100, 1300}},
 			{Name: "Costs", Values: []float64{600, 700, 650, 750}},
 			{Name: "Profit", Values: []float64{400, 500, 450, 550}},
@@ -302,17 +302,17 @@ func TestInsertChartNoLegend(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	err = u.InsertChart(docxchartupdater.ChartOptions{
-		Position:   docxchartupdater.PositionEnd,
+	err = u.InsertChart(docxupdater.ChartOptions{
+		Position:   docxupdater.PositionEnd,
 		Title:      "Chart Without Legend",
 		Categories: []string{"A", "B"},
-		Series: []docxchartupdater.SeriesData{
+		Series: []docxupdater.SeriesData{
 			{Name: "Data", Values: []float64{10, 20}},
 		},
 		ShowLegend: false,
@@ -341,23 +341,23 @@ func TestInsertChartAtBeginning(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
 	// Add some text first
-	if err := u.AddText("This is after the chart", docxchartupdater.PositionEnd); err != nil {
+	if err := u.AddText("This is after the chart", docxupdater.PositionEnd); err != nil {
 		t.Fatalf("AddText failed: %v", err)
 	}
 
 	// Insert chart at beginning
-	err = u.InsertChart(docxchartupdater.ChartOptions{
-		Position:   docxchartupdater.PositionBeginning,
+	err = u.InsertChart(docxupdater.ChartOptions{
+		Position:   docxupdater.PositionBeginning,
 		Title:      "First Chart",
 		Categories: []string{"A", "B"},
-		Series: []docxchartupdater.SeriesData{
+		Series: []docxupdater.SeriesData{
 			{Name: "Data", Values: []float64{5, 10}},
 		},
 		ShowLegend: true,

@@ -1,4 +1,4 @@
-package docxchartupdater
+package docxupdater
 
 // ChartData defines chart categories and series values.
 type ChartData struct {

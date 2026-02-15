@@ -1,4 +1,4 @@
-package docxchartupdater
+package docxupdater
 
 import (
 	"encoding/xml"
@@ -24,7 +24,7 @@ func New(docxPath string) (*Updater, error) {
 		return nil, fmt.Errorf("stat docx: %w", err)
 	}
 
-	tempDir, err := os.MkdirTemp("", "docx-chart-updater-*")
+	tempDir, err := os.MkdirTemp("", "docx-updater-*")
 	if err != nil {
 		return nil, fmt.Errorf("create temp dir: %w", err)
 	}

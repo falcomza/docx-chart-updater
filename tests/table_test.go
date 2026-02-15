@@ -1,4 +1,4 @@
-package docxchartupdater_test
+package docxupdater_test
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	docxchartupdater "github.com/falcomza/docx-chart-updater/src"
+	docxupdater "github.com/falcomza/docx-updater/src"
 )
 
 func TestInsertBasicTable(t *testing.T) {
@@ -19,16 +19,16 @@ func TestInsertBasicTable(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
 	// Create a simple table
-	err = u.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
+	err = u.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
 			{Title: "Name"},
 			{Title: "Age"},
 			{Title: "City"},
@@ -67,18 +67,18 @@ func TestInsertTableWithStyling(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	err = u.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
-			{Title: "Product", Alignment: docxchartupdater.CellAlignLeft},
-			{Title: "Price", Alignment: docxchartupdater.CellAlignRight},
-			{Title: "Stock", Alignment: docxchartupdater.CellAlignCenter},
+	err = u.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
+			{Title: "Product", Alignment: docxupdater.CellAlignLeft},
+			{Title: "Price", Alignment: docxupdater.CellAlignRight},
+			{Title: "Stock", Alignment: docxupdater.CellAlignCenter},
 		},
 		Rows: [][]string{
 			{"Laptop", "$999", "15"},
@@ -87,11 +87,11 @@ func TestInsertTableWithStyling(t *testing.T) {
 		},
 		HeaderBold:        true,
 		HeaderBackground:  "4472C4",
-		HeaderAlignment:   docxchartupdater.CellAlignCenter,
+		HeaderAlignment:   docxupdater.CellAlignCenter,
 		AlternateRowColor: "F2F2F2",
-		BorderStyle:       docxchartupdater.BorderSingle,
+		BorderStyle:       docxupdater.BorderSingle,
 		BorderSize:        6,
-		TableAlignment:    docxchartupdater.AlignCenter,
+		TableAlignment:    docxupdater.AlignCenter,
 	})
 	if err != nil {
 		t.Fatalf("InsertTable failed: %v", err)
@@ -119,7 +119,7 @@ func TestInsertTableWithRepeatHeader(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
@@ -135,9 +135,9 @@ func TestInsertTableWithRepeatHeader(t *testing.T) {
 		}
 	}
 
-	err = u.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
+	err = u.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
 			{Title: "Item"},
 			{Title: "Description"},
 			{Title: "Price"},
@@ -146,7 +146,7 @@ func TestInsertTableWithRepeatHeader(t *testing.T) {
 		HeaderBold:       true,
 		RepeatHeader:     true,
 		HeaderBackground: "2E75B5",
-		TableAlignment:   docxchartupdater.AlignCenter,
+		TableAlignment:   docxupdater.AlignCenter,
 	})
 	if err != nil {
 		t.Fatalf("InsertTable failed: %v", err)
@@ -170,16 +170,16 @@ func TestInsertTableInvalidRows(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
 	// Try to create table with mismatched column count
-	err = u.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
+	err = u.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
 			{Title: "Col1"},
 			{Title: "Col2"},
 		},
@@ -201,15 +201,15 @@ func TestInsertTableNoColumns(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	err = u.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns:  []docxchartupdater.ColumnDefinition{},
+	err = u.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns:  []docxupdater.ColumnDefinition{},
 		Rows:     [][]string{},
 	})
 	if err == nil {
@@ -226,15 +226,15 @@ func TestInsertTableCustomWidths(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
-	err = u.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
+	err = u.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
 			{Title: "Code"},
 			{Title: "Description"},
 			{Title: "Status"},
@@ -269,16 +269,16 @@ func TestInsertTableWidthPercentage(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
 	// Create table with 100% width (default)
-	err = u.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
+	err = u.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
 			{Title: "Column 1"},
 			{Title: "Column 2"},
 		},
@@ -311,23 +311,23 @@ func TestInsertTableWidthFixed(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
 	// Create table with fixed width in twips
-	err = u.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
+	err = u.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
 			{Title: "Column 1"},
 			{Title: "Column 2"},
 		},
 		Rows: [][]string{
 			{"Data 1", "Data 2"},
 		},
-		TableWidthType: docxchartupdater.TableWidthFixed,
+		TableWidthType: docxupdater.TableWidthFixed,
 		TableWidth:     7200, // 5 inches
 		HeaderBold:     true,
 	})
@@ -354,23 +354,23 @@ func TestInsertTableWidthAuto(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
 	// Create table with auto width
-	err = u.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
+	err = u.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
 			{Title: "Column 1"},
 			{Title: "Column 2"},
 		},
 		Rows: [][]string{
 			{"Data 1", "Data 2"},
 		},
-		TableWidthType: docxchartupdater.TableWidthAuto,
+		TableWidthType: docxupdater.TableWidthAuto,
 		HeaderBold:     true,
 	})
 	if err != nil {
@@ -396,23 +396,23 @@ func TestInsertTableWidth50Percent(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
 	// Create table with 50% width
-	err = u.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
+	err = u.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
 			{Title: "Column 1"},
 			{Title: "Column 2"},
 		},
 		Rows: [][]string{
 			{"Data 1", "Data 2"},
 		},
-		TableWidthType: docxchartupdater.TableWidthPercentage,
+		TableWidthType: docxupdater.TableWidthPercentage,
 		TableWidth:     2500, // 50% (5000 = 100%)
 		HeaderBold:     true,
 	})
@@ -439,16 +439,16 @@ func TestInsertTableRowHeightExact(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
 	// Create table with exact row heights
-	err = u.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
+	err = u.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
 			{Title: "Name"},
 			{Title: "Value"},
 		},
@@ -457,9 +457,9 @@ func TestInsertTableRowHeightExact(t *testing.T) {
 			{"Row 2", "Data 2"},
 		},
 		HeaderRowHeight:  720, // 0.5 inch for header
-		HeaderHeightRule: docxchartupdater.RowHeightExact,
+		HeaderHeightRule: docxupdater.RowHeightExact,
 		RowHeight:        360, // 0.25 inch for data rows
-		RowHeightRule:    docxchartupdater.RowHeightExact,
+		RowHeightRule:    docxupdater.RowHeightExact,
 		HeaderBold:       true,
 	})
 	if err != nil {
@@ -488,23 +488,23 @@ func TestInsertTableRowHeightAtLeast(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
 	// Create table with minimum row heights
-	err = u.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
+	err = u.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
 			{Title: "Description"},
 		},
 		Rows: [][]string{
 			{"This is a row that might have varying content length"},
 		},
 		RowHeight:     500,
-		RowHeightRule: docxchartupdater.RowHeightAtLeast,
+		RowHeightRule: docxupdater.RowHeightAtLeast,
 		HeaderBold:    true,
 	})
 	if err != nil {
@@ -530,16 +530,16 @@ func TestInsertTableRowHeightAuto(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
 	// Create table with auto row heights (default)
-	err = u.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
+	err = u.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
 			{Title: "Auto Height"},
 		},
 		Rows: [][]string{
@@ -573,16 +573,16 @@ func TestInsertTableWithNamedStyles(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
 	// Create table with named Word styles
-	err = u.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
+	err = u.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
 			{Title: "Heading Column"},
 			{Title: "Normal Column"},
 		},
@@ -621,16 +621,16 @@ func TestInsertTableMixedDirectAndNamedStyles(t *testing.T) {
 		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := docxchartupdater.New(inputPath)
+	u, err := docxupdater.New(inputPath)
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
 	defer u.Cleanup()
 
 	// Create table mixing named styles and direct formatting
-	err = u.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
+	err = u.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
 			{Title: "Column 1"},
 			{Title: "Column 2"},
 		},
@@ -641,7 +641,7 @@ func TestInsertTableMixedDirectAndNamedStyles(t *testing.T) {
 		HeaderBold:      true,                 // Plus direct formatting
 		HeaderBackground: "70AD47",
 		RowStyleName:    "Normal",             // Named style for rows
-		RowStyle: docxchartupdater.CellStyle{  // Plus direct formatting
+		RowStyle: docxupdater.CellStyle{  // Plus direct formatting
 			FontSize: 20, // 10pt
 		},
 	})

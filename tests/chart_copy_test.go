@@ -1,4 +1,4 @@
-package docxchartupdater_test
+package docxupdater_test
 
 import (
 	"os"
@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	docxchartupdater "github.com/falcomza/docx-chart-updater/src"
+	docxupdater "github.com/falcomza/docx-updater/src"
 )
 
 func TestCopyChart(t *testing.T) {
@@ -16,7 +16,7 @@ func TestCopyChart(t *testing.T) {
 		t.Skipf("Test DOCX not found: %s", testDocx)
 	}
 
-	updater, err := docxchartupdater.New(testDocx)
+	updater, err := docxupdater.New(testDocx)
 	if err != nil {
 		t.Fatalf("Failed to open test DOCX: %v", err)
 	}
@@ -110,7 +110,7 @@ func TestCopyChartMultipleTimes(t *testing.T) {
 		t.Skipf("Test DOCX not found: %s", testDocx)
 	}
 
-	updater, err := docxchartupdater.New(testDocx)
+	updater, err := docxupdater.New(testDocx)
 	if err != nil {
 		t.Fatalf("Failed to open test DOCX: %v", err)
 	}
@@ -180,7 +180,7 @@ func TestCopyChartInvalidSource(t *testing.T) {
 		t.Skipf("Test DOCX not found: %s", testDocx)
 	}
 
-	updater, err := docxchartupdater.New(testDocx)
+	updater, err := docxupdater.New(testDocx)
 	if err != nil {
 		t.Fatalf("Failed to open test DOCX: %v", err)
 	}
@@ -199,7 +199,7 @@ func TestCopyChartIgnoresMarker(t *testing.T) {
 		t.Skipf("Test DOCX not found: %s", testDocx)
 	}
 
-	updater, err := docxchartupdater.New(testDocx)
+	updater, err := docxupdater.New(testDocx)
 	if err != nil {
 		t.Fatalf("Failed to open test DOCX: %v", err)
 	}

@@ -4,32 +4,32 @@ import (
 	"fmt"
 	"log"
 
-	docxchartupdater "github.com/falcomza/docx-chart-updater/src"
+	docxupdater "github.com/falcomza/docx-updater/src"
 )
 
 func main() {
 	// Open the template document
-	updater, err := docxchartupdater.New("./templates/docx_template.docx")
+	updater, err := docxupdater.New("./templates/docx_template.docx")
 	if err != nil {
 		log.Fatalf("Failed to open template: %v", err)
 	}
 	defer updater.Cleanup()
 
 	// Add title
-	err = updater.AddHeading(1, "Table Row Height Configuration Examples", docxchartupdater.PositionEnd)
+	err = updater.AddHeading(1, "Table Row Height Configuration Examples", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add title: %v", err)
 	}
 
 	// Example 1: Auto height (default)
-	err = updater.AddHeading(2, "1. Auto Height (Default - Fits Content)", docxchartupdater.PositionEnd)
+	err = updater.AddHeading(2, "1. Auto Height (Default - Fits Content)", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add heading: %v", err)
 	}
 
-	err = updater.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
+	err = updater.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
 			{Title: "Description"},
 			{Title: "Notes"},
 		},
@@ -40,29 +40,29 @@ func main() {
 		},
 		HeaderBold:        true,
 		HeaderBackground:  "4472C4",
-		HeaderAlignment:   docxchartupdater.CellAlignCenter,
+		HeaderAlignment:   docxupdater.CellAlignCenter,
 		AlternateRowColor: "E7E6E6",
-		BorderStyle:       docxchartupdater.BorderSingle,
+		BorderStyle:       docxupdater.BorderSingle,
 		// RowHeightRule defaults to RowHeightAuto
 	})
 	if err != nil {
 		log.Fatalf("Failed to insert auto height table: %v", err)
 	}
 
-	err = updater.AddText("↑ Rows automatically adjust height to fit content (default behavior).", docxchartupdater.PositionEnd)
+	err = updater.AddText("↑ Rows automatically adjust height to fit content (default behavior).", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add description: %v", err)
 	}
 
 	// Example 2: Exact height
-	err = updater.AddHeading(2, "2. Exact Height (Fixed - No Growth)", docxchartupdater.PositionEnd)
+	err = updater.AddHeading(2, "2. Exact Height (Fixed - No Growth)", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add heading: %v", err)
 	}
 
-	err = updater.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
+	err = updater.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
 			{Title: "Item"},
 			{Title: "Specification"},
 			{Title: "Value"},
@@ -73,33 +73,33 @@ func main() {
 			{"Growth", "No expansion", "Locked"},
 		},
 		HeaderRowHeight:   720, // 0.5 inch (1440 twips = 1 inch)
-		HeaderHeightRule:  docxchartupdater.RowHeightExact,
+		HeaderHeightRule:  docxupdater.RowHeightExact,
 		RowHeight:         720, // 0.5 inch
-		RowHeightRule:     docxchartupdater.RowHeightExact,
+		RowHeightRule:     docxupdater.RowHeightExact,
 		HeaderBold:        true,
 		HeaderBackground:  "70AD47",
-		HeaderAlignment:   docxchartupdater.CellAlignCenter,
+		HeaderAlignment:   docxupdater.CellAlignCenter,
 		AlternateRowColor: "E2EFD9",
-		BorderStyle:       docxchartupdater.BorderSingle,
+		BorderStyle:       docxupdater.BorderSingle,
 	})
 	if err != nil {
 		log.Fatalf("Failed to insert exact height table: %v", err)
 	}
 
-	err = updater.AddText("↑ All rows have exact height of 0.5 inch (720 twips). Content is clipped if too large.", docxchartupdater.PositionEnd)
+	err = updater.AddText("↑ All rows have exact height of 0.5 inch (720 twips). Content is clipped if too large.", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add description: %v", err)
 	}
 
 	// Example 3: AtLeast height (minimum with growth)
-	err = updater.AddHeading(2, "3. Minimum Height (At Least - Can Grow)", docxchartupdater.PositionEnd)
+	err = updater.AddHeading(2, "3. Minimum Height (At Least - Can Grow)", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add heading: %v", err)
 	}
 
-	err = updater.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
+	err = updater.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
 			{Title: "Content"},
 			{Title: "Behavior"},
 		},
@@ -109,34 +109,34 @@ func main() {
 			{"Medium length text here", "Adjusts"},
 		},
 		RowHeight:         500, // Minimum 500 twips
-		RowHeightRule:     docxchartupdater.RowHeightAtLeast,
+		RowHeightRule:     docxupdater.RowHeightAtLeast,
 		HeaderBold:        true,
 		HeaderBackground:  "2E75B5",
-		HeaderAlignment:   docxchartupdater.CellAlignCenter,
+		HeaderAlignment:   docxupdater.CellAlignCenter,
 		AlternateRowColor: "DEEBF7",
-		BorderStyle:       docxchartupdater.BorderSingle,
+		BorderStyle:       docxupdater.BorderSingle,
 	})
 	if err != nil {
 		log.Fatalf("Failed to insert atLeast height table: %v", err)
 	}
 
-	err = updater.AddText("↑ Rows have minimum height of 500 twips but can grow if content requires it.", docxchartupdater.PositionEnd)
+	err = updater.AddText("↑ Rows have minimum height of 500 twips but can grow if content requires it.", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add description: %v", err)
 	}
 
 	// Example 4: Different header and row heights
-	err = updater.AddHeading(2, "4. Different Header and Row Heights", docxchartupdater.PositionEnd)
+	err = updater.AddHeading(2, "4. Different Header and Row Heights", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add heading: %v", err)
 	}
 
-	err = updater.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
-			{Title: "Quarter", Alignment: docxchartupdater.CellAlignCenter},
-			{Title: "Revenue", Alignment: docxchartupdater.CellAlignRight},
-			{Title: "Growth", Alignment: docxchartupdater.CellAlignRight},
+	err = updater.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
+			{Title: "Quarter", Alignment: docxupdater.CellAlignCenter},
+			{Title: "Revenue", Alignment: docxupdater.CellAlignRight},
+			{Title: "Growth", Alignment: docxupdater.CellAlignRight},
 		},
 		Rows: [][]string{
 			{"Q1 2026", "$250,000", "+12%"},
@@ -145,35 +145,35 @@ func main() {
 			{"Q4 2026", "$340,000", "+21%"},
 		},
 		HeaderRowHeight:   900,                                  // Taller header (0.625 inch)
-		HeaderHeightRule:  docxchartupdater.RowHeightExact,
+		HeaderHeightRule:  docxupdater.RowHeightExact,
 		RowHeight:         450,                                  // Shorter data rows (0.3125 inch)
-		RowHeightRule:     docxchartupdater.RowHeightExact,
+		RowHeightRule:     docxupdater.RowHeightExact,
 		HeaderBold:        true,
 		HeaderBackground:  "C65911",
-		HeaderAlignment:   docxchartupdater.CellAlignCenter,
+		HeaderAlignment:   docxupdater.CellAlignCenter,
 		AlternateRowColor: "FCE4D6",
-		BorderStyle:       docxchartupdater.BorderSingle,
+		BorderStyle:       docxupdater.BorderSingle,
 	})
 	if err != nil {
 		log.Fatalf("Failed to insert mixed height table: %v", err)
 	}
 
-	err = updater.AddText("↑ Header row is 900 twips (0.625\") tall, data rows are 450 twips (0.3125\") tall.", docxchartupdater.PositionEnd)
+	err = updater.AddText("↑ Header row is 900 twips (0.625\") tall, data rows are 450 twips (0.3125\") tall.", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add description: %v", err)
 	}
 
 	// Example 5: Tall rows for better spacing
-	err = updater.AddHeading(2, "5. Tall Rows for Visual Impact", docxchartupdater.PositionEnd)
+	err = updater.AddHeading(2, "5. Tall Rows for Visual Impact", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add heading: %v", err)
 	}
 
-	err = updater.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
-			{Title: "Task", Alignment: docxchartupdater.CellAlignLeft},
-			{Title: "Status", Alignment: docxchartupdater.CellAlignCenter},
+	err = updater.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
+			{Title: "Task", Alignment: docxupdater.CellAlignLeft},
+			{Title: "Status", Alignment: docxupdater.CellAlignCenter},
 		},
 		Rows: [][]string{
 			{"Design Review", "✓ Complete"},
@@ -181,39 +181,39 @@ func main() {
 			{"Testing", "◯ Pending"},
 		},
 		HeaderRowHeight:   1080, // 0.75 inch
-		HeaderHeightRule:  docxchartupdater.RowHeightExact,
+		HeaderHeightRule:  docxupdater.RowHeightExact,
 		RowHeight:         720, // 0.5 inch - spacious rows
-		RowHeightRule:     docxchartupdater.RowHeightExact,
+		RowHeightRule:     docxupdater.RowHeightExact,
 		HeaderBold:        true,
 		HeaderBackground:  "7030A0",
-		HeaderAlignment:   docxchartupdater.CellAlignCenter,
+		HeaderAlignment:   docxupdater.CellAlignCenter,
 		AlternateRowColor: "E9D8F4",
-		BorderStyle:       docxchartupdater.BorderSingle,
-		TableWidthType:    docxchartupdater.TableWidthPercentage,
+		BorderStyle:       docxupdater.BorderSingle,
+		TableWidthType:    docxupdater.TableWidthPercentage,
 		TableWidth:        3750, // 75% width
-		TableAlignment:    docxchartupdater.AlignCenter,
+		TableAlignment:    docxupdater.AlignCenter,
 	})
 	if err != nil {
 		log.Fatalf("Failed to insert tall rows table: %v", err)
 	}
 
-	err = updater.AddText("↑ Larger row heights (0.5-0.75 inch) create more spacious, easier-to-read tables.", docxchartupdater.PositionEnd)
+	err = updater.AddText("↑ Larger row heights (0.5-0.75 inch) create more spacious, easier-to-read tables.", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add description: %v", err)
 	}
 
 	// Add summary section
-	err = updater.AddHeading(2, "Row Height Summary", docxchartupdater.PositionEnd)
+	err = updater.AddHeading(2, "Row Height Summary", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add summary heading: %v", err)
 	}
 
-	err = updater.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
-			{Title: "Rule", Alignment: docxchartupdater.CellAlignLeft},
-			{Title: "Behavior", Alignment: docxchartupdater.CellAlignLeft},
-			{Title: "Use Case", Alignment: docxchartupdater.CellAlignLeft},
+	err = updater.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
+			{Title: "Rule", Alignment: docxupdater.CellAlignLeft},
+			{Title: "Behavior", Alignment: docxupdater.CellAlignLeft},
+			{Title: "Use Case", Alignment: docxupdater.CellAlignLeft},
 		},
 		Rows: [][]string{
 			{"RowHeightAuto", "Fits content automatically", "Default - variable content"},
@@ -222,10 +222,10 @@ func main() {
 		},
 		HeaderBold:        true,
 		HeaderBackground:  "44546A",
-		HeaderAlignment:   docxchartupdater.CellAlignCenter,
+		HeaderAlignment:   docxupdater.CellAlignCenter,
 		AlternateRowColor: "D6DCE4",
-		BorderStyle:       docxchartupdater.BorderSingle,
-		RowStyle: docxchartupdater.CellStyle{
+		BorderStyle:       docxupdater.BorderSingle,
+		RowStyle: docxupdater.CellStyle{
 			FontSize: 18, // 9pt
 		},
 	})
@@ -234,17 +234,17 @@ func main() {
 	}
 
 	// Add measurement reference
-	err = updater.AddHeading(2, "Height Measurements (Twips)", docxchartupdater.PositionEnd)
+	err = updater.AddHeading(2, "Height Measurements (Twips)", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add measurements heading: %v", err)
 	}
 
-	err = updater.InsertTable(docxchartupdater.TableOptions{
-		Position: docxchartupdater.PositionEnd,
-		Columns: []docxchartupdater.ColumnDefinition{
-			{Title: "Inches", Alignment: docxchartupdater.CellAlignRight},
-			{Title: "Twips", Alignment: docxchartupdater.CellAlignRight},
-			{Title: "Common Use", Alignment: docxchartupdater.CellAlignLeft},
+	err = updater.InsertTable(docxupdater.TableOptions{
+		Position: docxupdater.PositionEnd,
+		Columns: []docxupdater.ColumnDefinition{
+			{Title: "Inches", Alignment: docxupdater.CellAlignRight},
+			{Title: "Twips", Alignment: docxupdater.CellAlignRight},
+			{Title: "Common Use", Alignment: docxupdater.CellAlignLeft},
 		},
 		Rows: [][]string{
 			{"0.25\"", "360", "Compact rows"},
@@ -256,17 +256,17 @@ func main() {
 		},
 		HeaderBold:        true,
 		HeaderBackground:  "203864",
-		HeaderAlignment:   docxchartupdater.CellAlignCenter,
+		HeaderAlignment:   docxupdater.CellAlignCenter,
 		AlternateRowColor: "D9E2F3",
-		BorderStyle:       docxchartupdater.BorderSingle,
-		TableWidthType:    docxchartupdater.TableWidthPercentage,
+		BorderStyle:       docxupdater.BorderSingle,
+		TableWidthType:    docxupdater.TableWidthPercentage,
 		TableWidth:        3000, // 60% width
 	})
 	if err != nil {
 		log.Fatalf("Failed to insert measurements table: %v", err)
 	}
 
-	err = updater.AddText("Note: 1 inch = 1440 twips. Formula: height_in_twips = height_in_inches × 1440", docxchartupdater.PositionEnd)
+	err = updater.AddText("Note: 1 inch = 1440 twips. Formula: height_in_twips = height_in_inches × 1440", docxupdater.PositionEnd)
 	if err != nil {
 		log.Fatalf("Failed to add note: %v", err)
 	}
