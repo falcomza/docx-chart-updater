@@ -102,19 +102,19 @@ func (u *Updater) findNextChartIndex() int {
 func (u *Updater) generateWorkbookPath(chartIndex int, sourceWorkbookPath string) string {
 	// Extract the workbook filename pattern (e.g., embeddings/Microsoft_Excel_Worksheet1.xlsx)
 	relPath, _ := filepath.Rel(filepath.Join(u.tempDir, "word", "charts"), sourceWorkbookPath)
-	
+
 	// If it has a numbered suffix, increment it; otherwise add chartIndex
 	base := filepath.Base(relPath)
 	ext := filepath.Ext(base)
 	nameWithoutExt := strings.TrimSuffix(base, ext)
-	
+
 	// Try to find existing numeric suffix
 	if matches := workbookNumberPattern.FindStringSubmatch(nameWithoutExt); matches != nil {
 		// Has numeric suffix - use the chart index as the new suffix
 		newName := fmt.Sprintf("%s%d%s", matches[1], chartIndex, ext)
 		return filepath.Join(filepath.Dir(sourceWorkbookPath), newName)
 	}
-	
+
 	// No numeric suffix - add chart index
 	newName := fmt.Sprintf("%s%d%s", nameWithoutExt, chartIndex, ext)
 	return filepath.Join(filepath.Dir(sourceWorkbookPath), newName)
@@ -238,7 +238,7 @@ func (u *Updater) getNextDocPrId() (int, error) {
 
 	// Find all docPr id values using package-level regex
 	matches := docPrIDPattern.FindAllStringSubmatch(string(raw), -1)
-	
+
 	maxId := 0
 	for _, match := range matches {
 		if len(match) > 1 {
@@ -249,7 +249,7 @@ func (u *Updater) getNextDocPrId() (int, error) {
 			}
 		}
 	}
-	
+
 	return maxId + 1, nil
 }
 
@@ -287,7 +287,7 @@ func (u *Updater) generateChartDrawingXML(chartIndex int, relId string) ([]byte,
 	if err != nil {
 		return nil, fmt.Errorf("get next docPr id: %w", err)
 	}
-	
+
 	// This generates a chart drawing paragraph matching Word/LibreOffice structure
 	// Note: wp14 namespace is declared in the document root
 	const template = `<w:p><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" wp14:anchorId="%08X" wp14:editId="%08X"><wp:extent cx="6099523" cy="3340467"/><wp:effectExtent l="0" t="0" r="15875" b="12700"/><wp:docPr id="%d" name="Chart %d"/><wp:cNvGraphicFramePr/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="%s"/></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`
@@ -295,7 +295,7 @@ func (u *Updater) generateChartDrawingXML(chartIndex int, relId string) ([]byte,
 	// Generate unique IDs using constants
 	anchorId := ChartAnchorIDBase + uint32(chartIndex)*ChartIDIncrement
 	editId := ChartEditIDBase + uint32(chartIndex)*ChartIDIncrement
-	
+
 	return []byte(fmt.Sprintf(template, anchorId, editId, docPrId, chartIndex, relId)), nil
 }
 
@@ -312,7 +312,7 @@ func (u *Updater) addChartRelationship(chartIndex int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	
+
 	// Append a self-closing Relationship before </Relationships>
 	insert := fmt.Sprintf("\n  <Relationship Id=\"%s\" Type=\"%s/chart\" Target=\"charts/chart%d.xml\"/>\n", nextRelId, OfficeDocumentNS, chartIndex)
 	closer := []byte("</Relationships>")
@@ -324,7 +324,7 @@ func (u *Updater) addChartRelationship(chartIndex int) (string, error) {
 	n := copy(result, raw[:pos])
 	n += copy(result[n:], []byte(insert))
 	copy(result[n:], raw[pos:])
-	
+
 	if err := os.WriteFile(relsPath, result, 0o644); err != nil {
 		return "", fmt.Errorf("write relationships: %w", err)
 	}

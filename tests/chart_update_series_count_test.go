@@ -42,8 +42,8 @@ func TestUpdateDropsExtraSeries(t *testing.T) {
 	}
 
 	// Inspect chartN.xml to ensure there is only one <ser>
-	chartPath := filepath.Join(u.TempDir(), "word", "charts", 
-								  "chart"+strconvItoa(newIdx)+".xml")
+	chartPath := filepath.Join(u.TempDir(), "word", "charts",
+		"chart"+strconvItoa(newIdx)+".xml")
 	b, err := os.ReadFile(chartPath)
 	if err != nil {
 		t.Fatalf("read chart xml: %v", err)

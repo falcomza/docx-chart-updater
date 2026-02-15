@@ -80,8 +80,8 @@ type SeriesRef struct {
 
 // StrCache contains cached string values.
 type StrCache struct {
-	PtCount int      `xml:"ptCount>val,attr"`
-	Pts     []StrPt  `xml:"pt"`
+	PtCount int     `xml:"ptCount>val,attr"`
+	Pts     []StrPt `xml:"pt"`
 }
 
 // StrPt represents a string point in the cache.
@@ -144,27 +144,27 @@ func updateChartXML(chartPath string, data ChartData) error {
 // updateChartXMLContent updates chart XML content handling multiple namespaces and chart types.
 func updateChartXMLContent(rawXML []byte, data ChartData) ([]byte, error) {
 	content := string(rawXML)
-	
+
 	// Detect namespace prefix (c: or no prefix)
 	nsPrefix := detectNamespacePrefix(content)
-	
+
 	// Update title if provided
 	if data.ChartTitle != "" {
 		content = updateChartTitle(content, data.ChartTitle, nsPrefix)
 	}
-	
+
 	// Update axis titles if provided
 	if data.CategoryAxisTitle != "" || data.ValueAxisTitle != "" {
 		content = updateAxisTitles(content, data.CategoryAxisTitle, data.ValueAxisTitle, nsPrefix)
 	}
-	
+
 	// Find chart type and update series
 	var err error
 	content, err = updateChartSeries(content, data, nsPrefix)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return []byte(content), nil
 }
 
@@ -183,28 +183,28 @@ func updateChartTitle(content, title, nsPrefix string) string {
 	if titleStart == -1 {
 		return content // No title element to update
 	}
-	
+
 	titleEnd := strings.Index(content[titleStart:], "</"+nsPrefix+"title>")
 	if titleEnd == -1 {
 		return content
 	}
-	
+
 	// Find the text element within title
 	titleSection := content[titleStart : titleStart+titleEnd]
 	tStart := strings.Index(titleSection, "<"+nsPrefix+"t>")
 	if tStart == -1 {
 		return content
 	}
-	
+
 	tEnd := strings.Index(titleSection[tStart:], "</"+nsPrefix+"t>")
 	if tEnd == -1 {
 		return content
 	}
-	
+
 	// Replace the title text
 	beforeTitle := content[:titleStart+tStart+len("<"+nsPrefix+"t>")]
 	afterTitle := content[titleStart+tStart+len("<"+nsPrefix+"t>")+tEnd:]
-	
+
 	return beforeTitle + title + afterTitle
 }
 
@@ -212,17 +212,17 @@ func updateChartTitle(content, title, nsPrefix string) string {
 func updateAxisTitles(content, catTitle, valTitle, nsPrefix string) string {
 	// This is a simplified implementation
 	// In production, you'd want more robust XML parsing
-	
+
 	// Update category axis title (usually first axis)
 	if catTitle != "" {
 		content = updateFirstAxisTitle(content, catTitle, nsPrefix, "catAx")
 	}
-	
+
 	// Update value axis title (usually second axis)
 	if valTitle != "" {
 		content = updateFirstAxisTitle(content, valTitle, nsPrefix, "valAx")
 	}
-	
+
 	return content
 }
 
@@ -232,35 +232,35 @@ func updateFirstAxisTitle(content, title, nsPrefix, axisType string) string {
 	if axisStart == -1 {
 		return content
 	}
-	
+
 	axisEnd := strings.Index(content[axisStart:], "</"+nsPrefix+axisType+">")
 	if axisEnd == -1 {
 		return content
 	}
-	
+
 	axisSection := content[axisStart : axisStart+axisEnd]
-	
+
 	// Find title within this axis
 	titleStart := strings.Index(axisSection, "<"+nsPrefix+"title>")
 	if titleStart == -1 {
 		return content
 	}
-	
+
 	tStart := strings.Index(axisSection[titleStart:], "<"+nsPrefix+"t>")
 	if tStart == -1 {
 		return content
 	}
-	
+
 	tEnd := strings.Index(axisSection[titleStart+tStart:], "</"+nsPrefix+"t>")
 	if tEnd == -1 {
 		return content
 	}
-	
+
 	// Replace the axis title text
 	absoluteTStart := axisStart + titleStart + tStart + len("<"+nsPrefix+"t>")
 	beforeTitle := content[:absoluteTStart]
 	afterTitle := content[absoluteTStart+tEnd:]
-	
+
 	return beforeTitle + title + afterTitle
 }
 
@@ -268,10 +268,10 @@ func updateFirstAxisTitle(content, title, nsPrefix, axisType string) string {
 func updateChartSeries(content string, data ChartData, nsPrefix string) (string, error) {
 	// Find the chart type (barChart, lineChart, scatterChart, pieChart)
 	chartTypes := []string{"barChart", "lineChart", "scatterChart", "pieChart", "areaChart"}
-	
+
 	var chartType string
 	var chartStart, chartEnd int
-	
+
 	for _, ct := range chartTypes {
 		chartStart = strings.Index(content, "<"+nsPrefix+ct+">")
 		if chartStart != -1 {
@@ -284,19 +284,19 @@ func updateChartSeries(content string, data ChartData, nsPrefix string) (string,
 			break
 		}
 	}
-	
+
 	if chartType == "" {
 		return "", fmt.Errorf("unsupported or missing chart type")
 	}
-	
+
 	chartSection := content[chartStart:chartEnd]
-	
+
 	// Update or remove series
 	updatedSeries, err := updateSeriesSection(chartSection, data, nsPrefix, chartType)
 	if err != nil {
 		return "", err
 	}
-	
+
 	// Reconstruct content
 	return content[:chartStart] + updatedSeries + content[chartEnd:], nil
 }
@@ -305,24 +305,24 @@ func updateChartSeries(content string, data ChartData, nsPrefix string) (string,
 func updateSeriesSection(chartSection string, data ChartData, nsPrefix, chartType string) (string, error) {
 	// Find all series elements
 	serTags := findAllSeriesTags(chartSection, nsPrefix)
-	
+
 	if len(serTags) == 0 {
 		return "", fmt.Errorf("no series found in chart")
 	}
-	
+
 	// Build new series section
 	var buf bytes.Buffer
 	buf.WriteString("<" + nsPrefix + chartType + ">")
-	
+
 	// Write series from data
 	for i, series := range data.Series {
 		serXML := buildSeriesXML(series, data.Categories, i, nsPrefix, chartType)
 		buf.WriteString(serXML)
 	}
-	
+
 	// Copy any non-series elements (like axId, etc.) from the original
 	buf.WriteString(copyNonSeriesElements(chartSection, nsPrefix))
-	
+
 	return buf.String(), nil
 }
 
@@ -331,7 +331,7 @@ func findAllSeriesTags(content, nsPrefix string) []int {
 	var positions []int
 	searchStr := "<" + nsPrefix + "ser>"
 	offset := 0
-	
+
 	for {
 		pos := strings.Index(content[offset:], searchStr)
 		if pos == -1 {
@@ -340,23 +340,23 @@ func findAllSeriesTags(content, nsPrefix string) []int {
 		positions = append(positions, offset+pos)
 		offset += pos + len(searchStr)
 	}
-	
+
 	return positions
 }
 
 // buildSeriesXML constructs XML for a single series.
 func buildSeriesXML(series SeriesData, categories []string, idx int, nsPrefix, chartType string) string {
 	var buf bytes.Buffer
-	
+
 	buf.WriteString("<" + nsPrefix + "ser>")
 	buf.WriteString("<" + nsPrefix + "idx val=\"" + strconv.Itoa(idx) + "\"/>")
 	buf.WriteString("<" + nsPrefix + "order val=\"" + strconv.Itoa(idx) + "\"/>")
-	
+
 	// Series name
 	buf.WriteString("<" + nsPrefix + "tx>")
 	buf.WriteString("<" + nsPrefix + "v>" + xmlEscape(series.Name) + "</" + nsPrefix + "v>")
 	buf.WriteString("</" + nsPrefix + "tx>")
-	
+
 	// Categories (for most chart types except scatter)
 	if chartType != "scatterChart" {
 		buf.WriteString("<" + nsPrefix + "cat>")
@@ -372,13 +372,13 @@ func buildSeriesXML(series SeriesData, categories []string, idx int, nsPrefix, c
 		buf.WriteString("</" + nsPrefix + "strRef>")
 		buf.WriteString("</" + nsPrefix + "cat>")
 	}
-	
+
 	// Values
 	valTag := "val"
 	if chartType == "scatterChart" {
 		valTag = "yVal"
 	}
-	
+
 	buf.WriteString("<" + nsPrefix + valTag + ">")
 	buf.WriteString("<" + nsPrefix + "numRef>")
 	buf.WriteString("<" + nsPrefix + "numCache>")
@@ -391,29 +391,29 @@ func buildSeriesXML(series SeriesData, categories []string, idx int, nsPrefix, c
 	buf.WriteString("</" + nsPrefix + "numCache>")
 	buf.WriteString("</" + nsPrefix + "numRef>")
 	buf.WriteString("</" + nsPrefix + valTag + ">")
-	
+
 	buf.WriteString("</" + nsPrefix + "ser>")
-	
+
 	return buf.String()
 }
 
 // copyNonSeriesElements copies elements like axId from the original chart.
 func copyNonSeriesElements(chartSection, nsPrefix string) string {
 	var buf bytes.Buffer
-	
+
 	// Find and copy axId elements
 	axIdTags := []string{"axId", "dLbls", "gapWidth", "overlap", "varyColors"}
-	
+
 	for _, tag := range axIdTags {
 		startTag := "<" + nsPrefix + tag
 		offset := 0
-		
+
 		for {
 			pos := strings.Index(chartSection[offset:], startTag)
 			if pos == -1 {
 				break
 			}
-			
+
 			pos += offset
 			endPos := strings.Index(chartSection[pos:], "/>")
 			if endPos != -1 {
@@ -431,6 +431,6 @@ func copyNonSeriesElements(chartSection, nsPrefix string) string {
 			}
 		}
 	}
-	
+
 	return buf.String()
 }
