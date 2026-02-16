@@ -13,7 +13,14 @@ A powerful Go library for programmatically manipulating Microsoft Word (DOCX) do
 - **Chart Copying**: Duplicate existing charts programmatically for bulk report generation
 - **Table Creation**: Insert formatted tables with custom styles, borders, and row heights
 - **Paragraph Insertion**: Add styled text with headings, bold, italic, and underline formatting
+- **Image Insertion**: Add images with automatic proportional sizing and flexible positioning
+- **Page & Section Breaks**: Control document flow with page and section breaks
 - **Auto-Captions**: Generate auto-numbered captions using Word's SEQ fields for tables and charts
+- **Text Find & Replace**: Search and replace text with regex support throughout documents
+- **Read Operations**: Extract text from paragraphs, tables, headers, and footers
+- **Hyperlinks**: Insert external URLs and internal document links
+- **Headers & Footers**: Professional document headers and footers with automatic page numbering
+- **Document Properties**: Set core properties (Title, Author, Keywords), app properties (Company, Manager), and custom properties
 
 🛠️ **Advanced Features**
 - XML-based chart parsing using Go's `encoding/xml`
@@ -22,6 +29,9 @@ A powerful Go library for programmatically manipulating Microsoft Word (DOCX) do
 - Namespace-agnostic XML processing
 - Full OpenXML relationship and content type management
 - Strict workbook resolution via explicit relationships
+- Structured error types for better error handling
+- Case-sensitive and case-insensitive text operations
+- Whole word matching and regex pattern support
 
 ## Installation
 
@@ -185,6 +195,159 @@ u.InsertParagraph(updater.ParagraphOptions{
 u.Save("with_paragraphs.docx")
 ```
 
+### Inserting Images
+
+Add images with automatic proportional sizing:
+
+```go
+u, _ := updater.New("document.docx")
+defer u.Cleanup()
+
+// Insert image with width only - height calculated proportionally
+u.InsertImage(updater.ImageOptions{
+    Path:     "images/logo.png",
+    Width:    400,  // pixels
+    AltText:  "Company Logo",
+    Position: updater.PositionEnd,
+})
+
+// Insert image with height only - width calculated proportionally
+u.InsertImage(updater.ImageOptions{
+    Path:     "images/chart.jpg",
+    Height:   300,  // pixels
+    AltText:  "Chart Illustration",
+    Position: updater.PositionEnd,
+})
+
+// Insert image with both dimensions (may distort if not proportional)
+u.InsertImage(updater.ImageOptions{
+    Path:     "images/photo.png",
+    Width:    500,
+    Height:   400,
+    Position: updater.PositionEnd,
+})
+
+// Insert image with actual file dimensions
+u.InsertImage(updater.ImageOptions{
+    Path:     "images/screenshot.png",
+    AltText:  "Application Screenshot",
+    Position: updater.PositionEnd,
+})
+
+// Insert image after specific text
+u.InsertImage(updater.ImageOptions{
+    Path:     "images/diagram.png",
+    Width:    600,
+    Position: updater.PositionAfterText,
+    Anchor:   "See diagram below",
+})
+
+u.Save("with_images.docx")
+```
+
+**Proportional Sizing:**
+
+- Specify only `Width`: Height calculated automatically
+- Specify only `Height`: Width calculated automatically
+- Specify both: Used as-is (may distort)
+- Specify neither: Uses actual image dimensions
+
+**Supported Formats:**
+
+- PNG, JPEG, GIF, BMP, TIFF
+
+**Image Captions:**
+
+Images support auto-numbered captions using Word's SEQ fields:
+
+```go
+// Insert image with auto-numbered caption (Figure 1, Figure 2, etc.)
+u.InsertImage(updater.ImageOptions{
+    Path:     "images/chart.png",
+    Width:    500,
+    AltText:  "Sales Chart",
+    Position: updater.PositionEnd,
+    Caption: &updater.CaptionOptions{
+        Type:        updater.CaptionFigure,
+        Description: "Q1 Sales Performance",
+        AutoNumber:  true,
+        Position:    updater.CaptionAfter, // Caption below image (default)
+    },
+})
+
+// Image with caption above
+u.InsertImage(updater.ImageOptions{
+    Path:     "images/diagram.png",
+    Height:   350,
+    Position: updater.PositionEnd,
+    Caption: &updater.CaptionOptions{
+        Type:        updater.CaptionFigure,
+        Description: "Process Flow Diagram",
+        AutoNumber:  true,
+        Position:    updater.CaptionBefore, // Caption above image
+        Alignment:   updater.CellAlignCenter, // Center the caption
+    },
+})
+```
+
+### Page and Section Breaks
+
+Control document flow and layout with breaks:
+
+```go
+u, _ := updater.New("document.docx")
+defer u.Cleanup()
+
+// Insert a page break to start new content on next page
+u.InsertPageBreak(updater.BreakOptions{
+    Position: updater.PositionEnd,
+})
+
+// Insert page break after specific text
+u.InsertPageBreak(updater.BreakOptions{
+    Position: updater.PositionAfterText,
+    Anchor:   "End of Chapter 1",
+})
+
+// Insert section break (next page) - allows different page settings
+u.InsertSectionBreak(updater.BreakOptions{
+    Position:    updater.PositionEnd,
+    SectionType: updater.SectionBreakNextPage,
+})
+
+// Insert continuous section break (same page, different formatting)
+u.InsertSectionBreak(updater.BreakOptions{
+    Position:    updater.PositionEnd,
+    SectionType: updater.SectionBreakContinuous,
+})
+
+// Insert even/odd page section breaks (for double-sided printing)
+u.InsertSectionBreak(updater.BreakOptions{
+    Position:    updater.PositionEnd,
+    SectionType: updater.SectionBreakEvenPage,
+})
+
+u.InsertSectionBreak(updater.BreakOptions{
+    Position:    updater.PositionEnd,
+    SectionType: updater.SectionBreakOddPage,
+})
+
+u.Save("with_breaks.docx")
+```
+
+**Section Break Types:**
+
+- `SectionBreakNextPage` - Start new section on next page
+- `SectionBreakContinuous` - Start new section on same page
+- `SectionBreakEvenPage` - Start new section on next even page
+- `SectionBreakOddPage` - Start new section on next odd page
+
+**Use Cases:**
+
+- Page breaks: Separate chapters, start appendices on new pages
+- Section breaks: Different page orientations, margins, headers/footers per section
+- Even/Odd breaks: Professional double-sided printing layouts
+
 ### Auto-Numbering Captions
 
 Add captions with automatic sequential numbering:
@@ -238,27 +401,283 @@ for i := 0; i < 3; i++ {
 u.Save("multi_chart_report.docx")
 ```
 
+### Text Find & Replace
+
+Search and replace text throughout the document:
+
+```go
+u, _ := updater.New("document.docx")
+defer u.Cleanup()
+
+// Simple case-insensitive replacement
+opts := updater.DefaultReplaceOptions()
+count, err := u.ReplaceText("{{name}}", "John Doe", opts)
+fmt.Printf("Replaced %d occurrences\n", count)
+
+// Case-sensitive whole word replacement
+opts.MatchCase = true
+opts.WholeWord = true
+count, err = u.ReplaceText("API", "Application Programming Interface", opts)
+
+// Replace with regex pattern
+pattern := regexp.MustCompile(`\d{3}-\d{3}-\d{4}`) // Phone numbers
+count, err = u.ReplaceTextRegex(pattern, "[REDACTED]", opts)
+
+// Replace in specific locations
+opts.InParagraphs = true
+opts.InTables = true
+opts.InHeaders = true  // Also replace in headers
+opts.InFooters = true  // Also replace in footers
+
+// Limit number of replacements
+opts.MaxReplacements = 5  // Replace only first 5 occurrences
+
+u.Save("replaced.docx")
+```
+
+### Read Operations
+
+Extract and search for text in documents:
+
+```go
+u, _ := updater.New("document.docx")
+defer u.Cleanup()
+
+// Get all text from document
+text, err := u.GetText()
+fmt.Println(text)
+
+// Get text by paragraphs
+paragraphs, err := u.GetParagraphText()
+for i, para := range paragraphs {
+    fmt.Printf("Paragraph %d: %s\n", i, para)
+}
+
+// Get text from tables
+tables, err := u.GetTableText()
+for i, table := range tables {
+    fmt.Printf("Table %d:\n", i)
+    for _, row := range table {
+        fmt.Printf("  Row: %v\n", row)
+    }
+}
+
+// Find all occurrences of text
+opts := updater.DefaultFindOptions()
+opts.MatchCase = false
+matches, err := u.FindText("TODO:", opts)
+
+for _, match := range matches {
+    fmt.Printf("Found at paragraph %d: %s\n", match.Paragraph, match.Text)
+    fmt.Printf("  Before: ...%s\n", match.Before)
+    fmt.Printf("  After: %s...\n", match.After)
+}
+
+// Find with regex
+opts.UseRegex = true
+matches, err = u.FindText(`\b[A-Z]{2,}\b`, opts) // Find acronyms
+
+// Limit search results
+opts.MaxResults = 10  // Return only first 10 matches
+```
+
+### Hyperlinks
+
+Insert clickable links to external URLs or internal bookmarks:
+
+```go
+u, _ := updater.New("document.docx")
+defer u.Cleanup()
+
+// Insert external hyperlink
+opts := updater.DefaultHyperlinkOptions()
+opts.Position = updater.PositionEnd
+opts.Tooltip = "Visit our website"
+
+err := u.InsertHyperlink("Click here", "https://example.com", opts)
+
+// Insert hyperlink after specific text
+opts.Position = updater.PositionAfterText
+opts.Anchor = "See our website"
+err = u.InsertHyperlink("example.com", "https://example.com", opts)
+
+// Customize hyperlink appearance
+opts.Color = "FF0000"     // Red color
+opts.Underline = true     // Underline (default)
+opts.ScreenTip = "Link"   // Accessibility text
+
+// Insert email link
+err = u.InsertHyperlink("Contact Us", "mailto:info@example.com", opts)
+
+// Insert internal link to bookmark
+err = u.InsertInternalLink("Go to Summary", "summary_bookmark", opts)
+
+u.Save("with_links.docx")
+```
+
+### Headers and Footers
+
+Add professional headers and footers with automatic page numbering:
+
+```go
+u, _ := updater.New("document.docx")
+defer u.Cleanup()
+
+// Create header with three-column layout
+headerContent := updater.HeaderFooterContent{
+    LeftText:   "Company Name",
+    CenterText: "Confidential Report",
+    RightText:  "Date: Feb 2026",
+    PageNumber: false,
+}
+
+headerOpts := updater.DefaultHeaderOptions()
+headerOpts.Type = updater.HeaderDefault
+err := u.SetHeader(headerContent, headerOpts)
+
+// Create footer with page numbers
+footerContent := updater.HeaderFooterContent{
+    CenterText:       "Page ",
+    PageNumber:       true,
+    PageNumberFormat: "X of Y",  // Shows "Page 1 of 10"
+}
+
+footerOpts := updater.DefaultFooterOptions()
+err = u.SetFooter(footerContent, footerOpts)
+
+// Different header for first page
+headerOpts.Type = updater.HeaderFirst
+headerOpts.DifferentFirst = true
+firstPageHeader := updater.HeaderFooterContent{
+    CenterText: "Title Page - No Header",
+}
+err = u.SetHeader(firstPageHeader, headerOpts)
+
+// Different headers for odd/even pages (for double-sided printing)
+headerOpts.DifferentOddEven = true
+
+// Odd pages (right side)
+headerOpts.Type = updater.HeaderDefault
+oddHeader := updater.HeaderFooterContent{
+    RightText: "Chapter 1",
+}
+err = u.SetHeader(oddHeader, headerOpts)
+
+// Even pages (left side)
+headerOpts.Type = updater.HeaderEven
+evenHeader := updater.HeaderFooterContent{
+    LeftText: "Chapter 1",
+}
+err = u.SetHeader(evenHeader, headerOpts)
+
+// Add date field to footer
+footerContent.Date = true
+footerContent.DateFormat = "MMMM d, yyyy"  // "January 1, 2026"
+
+u.Save("with_headers_footers.docx")
+```
+
+### Setting Document Properties
+
+Set core, application, and custom document properties:
+
+```go
+u, _ := updater.New("template.docx")
+defer u.Cleanup()
+
+// Set core properties (visible in File > Info)
+coreProps := updater.CoreProperties{
+    Title:          "Q4 2026 Financial Report",
+    Subject:        "Quarterly Financial Analysis",
+    Creator:        "Finance Department",
+    Keywords:       "finance, Q4, 2026, revenue, analysis",
+    Description:    "Comprehensive financial report for Q4 2026",
+    Category:       "Financial Reports",
+    LastModifiedBy: "John Doe",
+    Revision:       "2",
+    Created:        time.Date(2026, 1, 1, 9, 0, 0, 0, time.UTC),
+    Modified:       time.Now(),
+}
+err := u.SetCoreProperties(coreProps)
+
+// Set application properties
+appProps := updater.AppProperties{
+    Company:     "TechVenture Inc",
+    Manager:     "Sarah Williams",
+    Application: "Microsoft Word",
+    AppVersion:  "16.0000",
+}
+err = u.SetAppProperties(appProps)
+
+// Set custom properties (for workflow automation, metadata tracking, etc.)
+customProps := []updater.CustomProperty{
+    {Name: "Department", Value: "Finance", Type: "lpwstr"},
+    {Name: "FiscalYear", Value: 2026, Type: "i4"},
+    {Name: "Quarter", Value: "Q4"},
+    {Name: "Revenue", Value: 15750000.50, Type: "r8"},
+    {Name: "IsApproved", Value: true, Type: "bool"},
+    {Name: "ProjectCode", Value: "FIN-Q4-2026"},
+    {Name: "ConfidentialityLevel", Value: "High"},
+}
+err = u.SetCustomProperties(customProps)
+
+// Read core properties
+props, err := u.GetCoreProperties()
+fmt.Printf("Title: %s, Author: %s\n", props.Title, props.Creator)
+
+u.Save("with_properties.docx")
+```
+
+**Property Types:**
+- Core Properties: Title, Subject, Creator, Keywords, Description, Category, LastModifiedBy, Revision, Created, Modified
+- App Properties: Company, Manager, Application, AppVersion
+- Custom Properties: Any key-value pairs with types: string (`lpwstr`), integer (`i4`), float (`r8`), boolean (`bool`), date (`date`)
+
 ## API Overview
 
 ### Chart Operations
 - `UpdateChart(index int, data ChartData)` - Update existing chart data
-- `InsertChart(options ChartInsertOptions)` - Create new chart from scratch
-- `CopyChart(index int, data ChartData, position Position)` - Duplicate existing chart
+- `InsertChart(options ChartOptions)` - Create new chart from scratch
+- `CopyChart(sourceIndex int, data ChartData, position InsertPosition)` - Copy and modify chart
 
 ### Table Operations
-- `InsertTable(data TableData, options TableOptions)` - Insert formatted table
-- Supports: custom styles, borders, row heights, column widths, alignments
+- `InsertTable(options TableOptions)` - Insert formatted table with custom styling
 
 ### Paragraph Operations
-- `AddText(text string, position Position)` - Insert plain text
-- `AddHeading(level int, text string, position Position)` - Insert heading (1-6)
-- `InsertParagraph(options ParagraphOptions)` - Insert formatted paragraph
-- Supports: bold, italic, underline, custom styles
+- `InsertParagraph(options ParagraphOptions)` - Insert styled paragraph
+- `InsertParagraphs(paragraphs []ParagraphOptions)` - Insert multiple paragraphs
+
+### Image Operations
+- `InsertImage(options ImageOptions)` - Insert image with proportional sizing
+
+### Text Operations
+- `ReplaceText(old, new string, options ReplaceOptions)` - Replace all text occurrences
+- `ReplaceTextRegex(pattern *regexp.Regexp, replacement string, options ReplaceOptions)` - Replace using regex
+- `GetText()` - Extract all text from document
+- `GetParagraphText()` - Extract text from all paragraphs
+- `GetTableText()` - Extract text from all tables
+- `FindText(pattern string, options FindOptions)` - Find all occurrences with context
+
+### Hyperlink Operations
+- `InsertHyperlink(text, url string, options HyperlinkOptions)` - Insert external hyperlink
+- `InsertInternalLink(text, bookmarkName string, options HyperlinkOptions)` - Insert internal link
+
+### Header & Footer Operations
+- `SetHeader(content HeaderFooterContent, options HeaderOptions)` - Create/update header
+- `SetFooter(content HeaderFooterContent, options FooterOptions)` - Create/update footer
+
+### Properties Operations
+- `SetCoreProperties(props CoreProperties)` - Set core document properties (Title, Author, etc.)
+- `GetCoreProperties()` - Retrieve core document properties
+- `SetAppProperties(props AppProperties)` - Set application properties (Company, Manager, etc.)
+- `SetCustomProperties(properties []CustomProperty)` - Set custom properties with various types
+
+### Break Operations
+- `InsertPageBreak(options BreakOptions)` - Insert page break
+- `InsertSectionBreak(options BreakOptions)` - Insert section break
 
 ### Caption Operations
-- `AddCaption(options CaptionOptions)` - Add auto-numbered caption
-- Uses Word's SEQ fields for automatic numbering
-- Supports both tables and charts
+- `AddCaption(options CaptionOptions)` - Insert auto-numbered caption
 
 ### Core Operations
 - `New(filepath string) (*Updater, error)` - Open DOCX file
@@ -277,6 +696,8 @@ u.Save("multi_chart_report.docx")
 │   ├── excel_handler.go   # Workbook updates
 │   ├── table.go           # Table insertion
 │   ├── paragraph.go       # Text insertion
+│   ├── image.go           # Image insertion
+│   ├── breaks.go          # Page and section breaks
 │   ├── caption.go         # Caption generation
 │   └── ...
 ├── tests/                 # Unit tests
@@ -291,6 +712,8 @@ Check the `/examples` directory for complete working examples:
 - `example_chart_insert.go` - Creating charts from scratch
 - `example_table.go` - Table creation with styling
 - `example_paragraph.go` - Text and heading insertion
+- `example_image.go` - Image insertion with proportional sizing
+- `example_breaks.go` - Page and section breaks
 - `example_captions.go` - Auto-numbered captions
 - `example_multi_subsystem.go` - Combined operations
 - `example_with_template.go` - Template-based generation
@@ -336,13 +759,12 @@ DOCX files are ZIP archives containing XML files. This library:
 
 - Currently supports bar, line, and scatter chart types
 - Table styles are limited to predefined Word styles
-- Images in charts are not yet supported
 - Performance depends on document size and complexity
 
 ## Roadmap
 
 - [ ] Add more chart types (pie, area, combo charts)
-- [ ] Image insertion support
+- [x] Image insertion support with proportional sizing
 - [ ] Header/footer manipulation
 - [ ] Style customization API
 - [ ] Performance optimizations for large documents
