@@ -35,6 +35,9 @@ type ImageOptions struct {
 
 	// Anchor text for position-based insertion (for PositionAfterText/PositionBeforeText)
 	Anchor string
+
+	// Caption options (nil for no caption)
+	Caption *CaptionOptions
 }
 
 // ImageDimensions stores image width and height in pixels

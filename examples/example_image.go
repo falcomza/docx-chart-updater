@@ -97,6 +97,55 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Example 7: Insert image with auto-numbered caption (Figure 1)
+	if err := u.InsertImage(updater.ImageOptions{
+		Path:     "images/chart.png",
+		Width:    500,
+		AltText:  "Sales Chart",
+		Position: updater.PositionEnd,
+		Caption: &updater.CaptionOptions{
+			Type:        updater.CaptionFigure,
+			Description: "Q1 Sales Performance",
+			AutoNumber:  true,
+			Position:    updater.CaptionAfter, // Caption below image
+		},
+	}); err != nil {
+		log.Fatal(err)
+	}
+
+	// Example 8: Insert image with caption before (Figure 2)
+	if err := u.InsertImage(updater.ImageOptions{
+		Path:     "images/process.png",
+		Height:   350,
+		AltText:  "Process Flow",
+		Position: updater.PositionEnd,
+		Caption: &updater.CaptionOptions{
+			Type:        updater.CaptionFigure,
+			Description: "End-to-End Process Flow",
+			AutoNumber:  true,
+			Position:    updater.CaptionBefore, // Caption above image
+		},
+	}); err != nil {
+		log.Fatal(err)
+	}
+
+	// Example 9: Insert image with centered caption (Figure 3)
+	if err := u.InsertImage(updater.ImageOptions{
+		Path:     "images/architecture.png",
+		Width:    600,
+		AltText:  "System Architecture",
+		Position: updater.PositionEnd,
+		Caption: &updater.CaptionOptions{
+			Type:        updater.CaptionFigure,
+			Description: "Complete System Architecture",
+			AutoNumber:  true,
+			Position:    updater.CaptionAfter,
+			Alignment:   updater.CellAlignCenter, // Center the caption
+		},
+	}); err != nil {
+		log.Fatal(err)
+	}
+
 	// Save the document
 	if err := u.Save("output/document_with_images.docx"); err != nil {
 		log.Fatal(err)

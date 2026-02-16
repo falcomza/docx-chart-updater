@@ -76,8 +76,30 @@ func (u *Updater) InsertImage(opts ImageOptions) error {
 		return fmt.Errorf("read document.xml: %w", err)
 	}
 
+	// Handle caption if provided
+	var contentToInsert []byte
+	if opts.Caption != nil {
+		// Validate caption options
+		if err := ValidateCaptionOptions(opts.Caption); err != nil {
+			return fmt.Errorf("invalid caption options: %w", err)
+		}
+
+		// Default to Figure caption type for images
+		if opts.Caption.Type == "" {
+			opts.Caption.Type = CaptionFigure
+		}
+
+		// Generate caption XML
+		captionXML := generateCaptionXML(*opts.Caption)
+
+		// Combine image and caption based on position
+		contentToInsert = insertCaptionWithElement(raw, captionXML, imageXML, opts.Caption.Position)
+	} else {
+		contentToInsert = imageXML
+	}
+
 	// Insert image at the specified position
-	updated, err := insertImageAtPosition(raw, imageXML, opts)
+	updated, err := insertImageAtPosition(raw, contentToInsert, opts)
 	if err != nil {
 		return fmt.Errorf("insert image: %w", err)
 	}

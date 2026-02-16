@@ -419,3 +419,187 @@ func createTestImageForTemplate(t *testing.T, path string, width, height int) {
 		t.Fatalf("encode PNG: %v", err)
 	}
 }
+
+// TestInsertImageWithCaption tests image insertion with auto-numbered captions
+func TestInsertImageWithCaption(t *testing.T) {
+	templatePath := "../templates/docx_template.docx"
+	outputDir := "../outputs"
+	outputPath := filepath.Join(outputDir, "template_with_captioned_images_test.docx")
+
+	// Create test images
+	tempDir := t.TempDir()
+	image1Path := filepath.Join(tempDir, "chart.png")
+	image2Path := filepath.Join(tempDir, "diagram.png")
+	createTestImageForTemplate(t, image1Path, 800, 600)
+	createTestImageForTemplate(t, image2Path, 1024, 768)
+
+	// Verify template exists
+	if _, err := os.Stat(templatePath); os.IsNotExist(err) {
+		t.Skipf("Template file not found: %s", templatePath)
+	}
+
+	// Ensure output directory exists
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		t.Fatalf("Failed to create output directory: %v", err)
+	}
+
+	u, err := docxupdater.New(templatePath)
+	if err != nil {
+		t.Fatalf("Failed to open template: %v", err)
+	}
+	defer u.Cleanup()
+
+	// Add heading
+	u.InsertParagraph(docxupdater.ParagraphOptions{
+		Text:     "Image Gallery with Captions",
+		Style:    docxupdater.StyleHeading1,
+		Position: docxupdater.PositionEnd,
+	})
+
+	// Insert first image with caption after (default for figures)
+	err = u.InsertImage(docxupdater.ImageOptions{
+		Path:     image1Path,
+		Width:    500,
+		AltText:  "Sales Chart",
+		Position: docxupdater.PositionEnd,
+		Caption: &docxupdater.CaptionOptions{
+			Type:        docxupdater.CaptionFigure,
+			Description: "Monthly Sales Performance",
+			AutoNumber:  true,
+			Position:    docxupdater.CaptionAfter,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Failed to insert first image with caption: %v", err)
+	}
+
+	// Add some text
+	u.InsertParagraph(docxupdater.ParagraphOptions{
+		Text:     "The chart above shows significant growth in Q1.",
+		Style:    docxupdater.StyleNormal,
+		Position: docxupdater.PositionEnd,
+	})
+
+	// Insert second image with caption before
+	err = u.InsertImage(docxupdater.ImageOptions{
+		Path:     image2Path,
+		Height:   400,
+		AltText:  "System Diagram",
+		Position: docxupdater.PositionEnd,
+		Caption: &docxupdater.CaptionOptions{
+			Type:        docxupdater.CaptionFigure,
+			Description: "System Architecture Overview",
+			AutoNumber:  true,
+			Position:    docxupdater.CaptionBefore,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Failed to insert second image with caption: %v", err)
+	}
+
+	// Insert third image with centered caption
+	err = u.InsertImage(docxupdater.ImageOptions{
+		Path:     image1Path,
+		Width:    450,
+		AltText:  "Process Flow",
+		Position: docxupdater.PositionEnd,
+		Caption: &docxupdater.CaptionOptions{
+			Type:        docxupdater.CaptionFigure,
+			Description: "End-to-End Process Flow",
+			AutoNumber:  true,
+			Position:    docxupdater.CaptionAfter,
+			Alignment:   docxupdater.CellAlignCenter,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Failed to insert third image with caption: %v", err)
+	}
+
+	// Save the document
+	if err := u.Save(outputPath); err != nil {
+		t.Fatalf("Failed to save document: %v", err)
+	}
+
+	// Verify the output file was created
+	if _, err := os.Stat(outputPath); os.IsNotExist(err) {
+		t.Fatalf("Output file was not created: %s", outputPath)
+	}
+
+	// Verify document contains captions
+	docXML := readZipEntry(t, outputPath, "word/document.xml")
+	if !strings.Contains(docXML, "Monthly Sales Performance") {
+		t.Error("First caption not found")
+	}
+	if !strings.Contains(docXML, "System Architecture Overview") {
+		t.Error("Second caption not found")
+	}
+	if !strings.Contains(docXML, "End-to-End Process Flow") {
+		t.Error("Third caption not found")
+	}
+
+	// Verify SEQ fields for auto-numbering
+	if !strings.Contains(docXML, "SEQ Figure") {
+		t.Error("SEQ field not found for auto-numbering")
+	}
+
+	t.Logf("Successfully created document with captioned images at: %s", outputPath)
+}
+
+// TestInsertImageWithManualCaption tests image with manual caption numbering
+func TestInsertImageWithManualCaption(t *testing.T) {
+	templatePath := "../templates/docx_template.docx"
+	outputDir := "../outputs"
+	outputPath := filepath.Join(outputDir, "template_with_manual_caption_test.docx")
+
+	// Create test image
+	tempDir := t.TempDir()
+	testImagePath := filepath.Join(tempDir, "photo.png")
+	createTestImageForTemplate(t, testImagePath, 640, 480)
+
+	// Verify template exists
+	if _, err := os.Stat(templatePath); os.IsNotExist(err) {
+		t.Skipf("Template file not found: %s", templatePath)
+	}
+
+	// Ensure output directory exists
+	if err := os.MkdirAll(outputDir, 0o755); err != nil {
+		t.Fatalf("Failed to create output directory: %v", err)
+	}
+
+	u, err := docxupdater.New(templatePath)
+	if err != nil {
+		t.Fatalf("Failed to open template: %v", err)
+	}
+	defer u.Cleanup()
+
+	// Insert image with manual caption numbering
+	err = u.InsertImage(docxupdater.ImageOptions{
+		Path:     testImagePath,
+		Width:    400,
+		AltText:  "Product Photo",
+		Position: docxupdater.PositionEnd,
+		Caption: &docxupdater.CaptionOptions{
+			Type:         docxupdater.CaptionFigure,
+			Description:  "Product XYZ-100",
+			AutoNumber:   false,
+			ManualNumber: 5, // Start at Figure 5
+			Position:     docxupdater.CaptionAfter,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Failed to insert image with manual caption: %v", err)
+	}
+
+	// Save the document
+	if err := u.Save(outputPath); err != nil {
+		t.Fatalf("Failed to save document: %v", err)
+	}
+
+	// Verify document contains the manual caption
+	docXML := readZipEntry(t, outputPath, "word/document.xml")
+	if !strings.Contains(docXML, "Product XYZ-100") {
+		t.Error("Caption description not found")
+	}
+
+	t.Logf("Successfully created document with manual caption at: %s", outputPath)
+}

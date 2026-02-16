@@ -237,13 +237,49 @@ u.Save("with_images.docx")
 ```
 
 **Proportional Sizing:**
+
 - Specify only `Width`: Height calculated automatically
 - Specify only `Height`: Width calculated automatically
 - Specify both: Used as-is (may distort)
 - Specify neither: Uses actual image dimensions
 
 **Supported Formats:**
+
 - PNG, JPEG, GIF, BMP, TIFF
+
+**Image Captions:**
+
+Images support auto-numbered captions using Word's SEQ fields:
+
+```go
+// Insert image with auto-numbered caption (Figure 1, Figure 2, etc.)
+u.InsertImage(updater.ImageOptions{
+    Path:     "images/chart.png",
+    Width:    500,
+    AltText:  "Sales Chart",
+    Position: updater.PositionEnd,
+    Caption: &updater.CaptionOptions{
+        Type:        updater.CaptionFigure,
+        Description: "Q1 Sales Performance",
+        AutoNumber:  true,
+        Position:    updater.CaptionAfter, // Caption below image (default)
+    },
+})
+
+// Image with caption above
+u.InsertImage(updater.ImageOptions{
+    Path:     "images/diagram.png",
+    Height:   350,
+    Position: updater.PositionEnd,
+    Caption: &updater.CaptionOptions{
+        Type:        updater.CaptionFigure,
+        Description: "Process Flow Diagram",
+        AutoNumber:  true,
+        Position:    updater.CaptionBefore, // Caption above image
+        Alignment:   updater.CellAlignCenter, // Center the caption
+    },
+})
+```
 
 ### Auto-Numbering Captions
 
@@ -316,15 +352,19 @@ u.Save("multi_chart_report.docx")
 - Supports: bold, italic, underline, custom styles
 
 ### Image Operations
+
 - `InsertImage(options ImageOptions)` - Insert image with optional proportional sizing
 - Automatic dimension calculation to maintain aspect ratio
 - Supports: PNG, JPEG, GIF, BMP, TIFF formats
 - Flexible positioning: beginning, end, before/after text
+- Auto-numbered captions with SEQ fields
 
 ### Caption Operations
-- `AddCaption(options CaptionOptions)` - Add auto-numbered caption
+
+- Integrated into `InsertChart`, `InsertTable`, and `InsertImage` via `Caption` field
 - Uses Word's SEQ fields for automatic numbering
-- Supports both tables and charts
+- Supports figures (images/charts) and tables
+- Customizable position (before/after) and alignment
 
 ### Core Operations
 - `New(filepath string) (*Updater, error)` - Open DOCX file
