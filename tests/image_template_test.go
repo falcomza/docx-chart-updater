@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	docxupdater "github.com/falcomza/docx-updater/src"
+	docxupdater "github.com/falcomza/docx-update/src"
 )
 
 // TestInsertImageWithRealTemplate tests image insertion using the actual docx_template.docx
