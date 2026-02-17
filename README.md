@@ -19,6 +19,7 @@ A powerful Go library for programmatically manipulating Microsoft Word (DOCX) do
 - **Text Find & Replace**: Search and replace text with regex support throughout documents
 - **Read Operations**: Extract text from paragraphs, tables, headers, and footers
 - **Hyperlinks**: Insert external URLs and internal document links
+- **Bookmarks**: Create, manage, and reference bookmarks for internal navigation and TOC
 - **Headers & Footers**: Professional document headers and footers with automatic page numbering
 - **Document Properties**: Set core properties (Title, Author, Keywords), app properties (Company, Manager), and custom properties
 
@@ -739,7 +740,7 @@ u.Save("with_properties.docx")
 
 ```
 .
-├── src/                    # Core library
+├── *.go                   # Core library (root level)
 │   ├── chart_updater.go   # Main API
 │   ├── chart.go           # Chart insertion
 │   ├── chart_copy.go      # Chart duplication
@@ -748,18 +749,21 @@ u.Save("with_properties.docx")
 │   ├── table.go           # Table insertion
 │   ├── paragraph.go       # Text insertion
 │   ├── image.go           # Image insertion
+│   ├── bookmark.go        # Bookmark management
 │   ├── breaks.go          # Page and section breaks
 │   ├── caption.go         # Caption generation
 │   └── ...
-├── tests/                 # Unit tests
+├── *_test.go              # Unit tests (root level)
 ├── examples/              # Example programs
-└── templates/             # Sample templates
+├── templates/             # Sample templates
+└── LICENSE                # MIT License
 ```
 
 ## Examples
 
 Check the `/examples` directory for complete working examples:
 
+- `example_bookmarks.go` - Bookmark creation and internal navigation
 - `example_chart_insert.go` - Creating charts from scratch
 - `example_table.go` - Table creation with styling
 - `example_paragraph.go` - Text and heading insertion
