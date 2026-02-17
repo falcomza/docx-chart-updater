@@ -44,6 +44,9 @@ var (
 	// docPrIDPattern matches docPr id attributes in document.xml
 	docPrIDPattern = regexp.MustCompile(`docPr id="(\d+)"`)
 
+	// bookmarkIDPattern matches bookmark id attributes (w:bookmarkStart and w:bookmarkEnd)
+	bookmarkIDPattern = regexp.MustCompile(`w:id="(\d+)"`)
+
 	// relIDPattern matches relationship IDs (e.g., rId1, rId2)
 	relIDPattern = regexp.MustCompile(`^rId(\d+)$`)
 

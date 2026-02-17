@@ -515,6 +515,52 @@ err = u.InsertInternalLink("Go to Summary", "summary_bookmark", opts)
 u.Save("with_links.docx")
 ```
 
+### Bookmarks
+
+Create bookmarks to mark locations in your document and enable internal navigation:
+
+```go
+u, _ := updater.New("document.docx")
+defer u.Cleanup()
+
+// Create an empty bookmark (position marker)
+opts := updater.DefaultBookmarkOptions()
+opts.Position = updater.PositionEnd
+err := u.CreateBookmark("section_marker", opts)
+
+// Create bookmark with text content
+opts.Style = updater.StyleHeading1
+err = u.CreateBookmarkWithText("executive_summary", "Executive Summary", opts)
+
+// Wrap existing text in a bookmark
+err = u.WrapTextInBookmark("key_finding", "important result")
+
+// Create internal links to bookmarks
+linkOpts := updater.DefaultHyperlinkOptions()
+linkOpts.Position = updater.PositionBeginning
+err = u.InsertInternalLink("Jump to Summary", "executive_summary", linkOpts)
+
+// Position-based bookmark insertion
+opts.Position = updater.PositionAfterText
+opts.Anchor = "Chapter 3"
+err = u.CreateBookmark("chapter3_bookmark", opts)
+
+u.Save("with_bookmarks.docx")
+```
+
+**Bookmark Name Rules:**
+- Must start with a letter
+- Can contain letters, digits, and underscores
+- No spaces or special characters (except underscore)
+- Maximum 40 characters
+- Cannot start with reserved prefixes (`_Toc`, `_Hlt`, `_Ref`, `_GoBack`)
+
+**Common Use Cases:**
+- Table of contents with clickable links
+- Cross-references within documents
+- Navigation between sections
+- Marking important locations for reference
+
 ### Headers and Footers
 
 Add professional headers and footers with automatic page numbering:
@@ -661,6 +707,11 @@ u.Save("with_properties.docx")
 ### Hyperlink Operations
 - `InsertHyperlink(text, url string, options HyperlinkOptions)` - Insert external hyperlink
 - `InsertInternalLink(text, bookmarkName string, options HyperlinkOptions)` - Insert internal link
+
+### Bookmark Operations
+- `CreateBookmark(name string, options BookmarkOptions)` - Create empty bookmark marker
+- `CreateBookmarkWithText(name, text string, options BookmarkOptions)` - Create bookmark with text content
+- `WrapTextInBookmark(name, anchorText string)` - Wrap existing text in bookmark
 
 ### Header & Footer Operations
 - `SetHeader(content HeaderFooterContent, options HeaderOptions)` - Create/update header
