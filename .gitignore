@@ -1,6 +1,5 @@
 templates/
 outputs/
-examples/
 *.log
 *.tmp
 *.bak
