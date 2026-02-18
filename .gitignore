@@ -1,5 +1,6 @@
 templates/
 outputs/
+reference_chart/
 *.log
 *.tmp
 *.bak
