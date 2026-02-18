@@ -160,8 +160,20 @@ func (u *Updater) createChartXML(chartPath string, opts ChartOptions) error {
 func generateChartXML(opts ChartOptions) []byte {
 	var buf bytes.Buffer
 
+	// XML declaration with newline (Word requires this)
 	buf.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`)
-	buf.WriteString(`<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">`)
+	buf.WriteString("\n")
+
+	// chartSpace with all standard namespaces (Word requires these for compatibility)
+	buf.WriteString(`<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"`)
+	buf.WriteString(` xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"`)
+	buf.WriteString(` xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"`)
+	buf.WriteString(` xmlns:c16r2="http://schemas.microsoft.com/office/drawing/2015/06/chart">`)
+
+	// Chart properties (Word expects these even if not modified)
+	buf.WriteString(`<c:date1904 val="0"/>`)
+	buf.WriteString(`<c:lang val="en-US"/>`)
+	buf.WriteString(`<c:roundedCorners val="0"/>`)
 
 	buf.WriteString(`<c:chart>`)
 

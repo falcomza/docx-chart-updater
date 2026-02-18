@@ -134,11 +134,38 @@ func updateChartXML(chartPath string, data ChartData) error {
 		return fmt.Errorf("update chart content: %w", err)
 	}
 
+	// Ensure proper XML formatting: verify newline after XML declaration
+	updated = ensureXMLDeclarationNewline(updated)
+
 	if err := os.WriteFile(chartPath, updated, 0o644); err != nil {
 		return fmt.Errorf("write chart xml: %w", err)
 	}
 
 	return nil
+}
+
+// ensureXMLDeclarationNewline ensures there's a newline after the XML declaration
+// Word requires this for strict XML parsing
+func ensureXMLDeclarationNewline(xmlContent []byte) []byte {
+	content := string(xmlContent)
+
+	// Find the XML declaration
+	declEnd := "?>"
+	idx := strings.Index(content, declEnd)
+	if idx == -1 {
+		return xmlContent // No XML declaration found
+	}
+
+	idx += len(declEnd)
+
+	// Check if there's already a newline
+	if idx < len(content) && content[idx] == '\n' {
+		return xmlContent // Already has newline
+	}
+
+	// Insert newline after XML declaration
+	result := content[:idx] + "\n" + content[idx:]
+	return []byte(result)
 }
 
 // updateChartXMLContent updates chart XML content handling multiple namespaces and chart types.
