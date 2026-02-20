@@ -334,6 +334,7 @@ u.InsertPageBreak(updater.BreakOptions{
 u.InsertSectionBreak(updater.BreakOptions{
     Position:    updater.PositionEnd,
     SectionType: updater.SectionBreakNextPage,
+    PageLayout:  updater.PageLayoutA3Landscape(),
 })
 
 // Insert continuous section break (same page, different formatting)
@@ -368,6 +369,13 @@ u.Save("with_breaks.docx")
 - Page breaks: Separate chapters, start appendices on new pages
 - Section breaks: Different page orientations, margins, headers/footers per section
 - Even/Odd breaks: Professional double-sided printing layouts
+
+**Layout Helper Functions:**
+
+- `PageLayoutLetterPortrait()` / `PageLayoutLetterLandscape()`
+- `PageLayoutA4Portrait()` / `PageLayoutA4Landscape()`
+- `PageLayoutA3Portrait()` / `PageLayoutA3Landscape()`
+- `PageLayoutLegalPortrait()`
 
 ### Auto-Numbering Captions
 

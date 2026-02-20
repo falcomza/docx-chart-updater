@@ -207,6 +207,38 @@ func PageLayoutA4Landscape() *PageLayoutOptions {
 	}
 }
 
+// PageLayoutA3Portrait creates an A3 portrait layout with default margins
+func PageLayoutA3Portrait() *PageLayoutOptions {
+	return &PageLayoutOptions{
+		PageWidth:    PageWidthA3,
+		PageHeight:   PageHeightA3,
+		Orientation:  OrientationPortrait,
+		MarginTop:    MarginDefault,
+		MarginRight:  MarginDefault,
+		MarginBottom: MarginDefault,
+		MarginLeft:   MarginDefault,
+		MarginHeader: MarginHeaderFooterDefault,
+		MarginFooter: MarginHeaderFooterDefault,
+		MarginGutter: 0,
+	}
+}
+
+// PageLayoutA3Landscape creates an A3 landscape layout with default margins
+func PageLayoutA3Landscape() *PageLayoutOptions {
+	return &PageLayoutOptions{
+		PageWidth:    PageHeightA3, // Swapped for landscape
+		PageHeight:   PageWidthA3,  // Swapped for landscape
+		Orientation:  OrientationLandscape,
+		MarginTop:    MarginDefault,
+		MarginRight:  MarginDefault,
+		MarginBottom: MarginDefault,
+		MarginLeft:   MarginDefault,
+		MarginHeader: MarginHeaderFooterDefault,
+		MarginFooter: MarginHeaderFooterDefault,
+		MarginGutter: 0,
+	}
+}
+
 // PageLayoutLegalPortrait creates a US Legal portrait layout with 1" margins
 func PageLayoutLegalPortrait() *PageLayoutOptions {
 	return &PageLayoutOptions{

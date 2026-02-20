@@ -245,6 +245,30 @@ func TestPageLayoutHelpers(t *testing.T) {
 		t.Errorf("A4 landscape height = %d, want %d", a4Landscape.PageHeight, PageWidthA4)
 	}
 
+	// A3 Portrait
+	a3Portrait := PageLayoutA3Portrait()
+	if a3Portrait.PageWidth != PageWidthA3 {
+		t.Errorf("A3 portrait width = %d, want %d", a3Portrait.PageWidth, PageWidthA3)
+	}
+	if a3Portrait.PageHeight != PageHeightA3 {
+		t.Errorf("A3 portrait height = %d, want %d", a3Portrait.PageHeight, PageHeightA3)
+	}
+	if a3Portrait.Orientation != OrientationPortrait {
+		t.Errorf("A3 portrait orientation = %s, want %s", a3Portrait.Orientation, OrientationPortrait)
+	}
+
+	// A3 Landscape
+	a3Landscape := PageLayoutA3Landscape()
+	if a3Landscape.PageWidth != PageHeightA3 {
+		t.Errorf("A3 landscape width = %d, want %d", a3Landscape.PageWidth, PageHeightA3)
+	}
+	if a3Landscape.PageHeight != PageWidthA3 {
+		t.Errorf("A3 landscape height = %d, want %d", a3Landscape.PageHeight, PageWidthA3)
+	}
+	if a3Landscape.Orientation != OrientationLandscape {
+		t.Errorf("A3 landscape orientation = %s, want %s", a3Landscape.Orientation, OrientationLandscape)
+	}
+
 	// Legal Portrait
 	legalPortrait := PageLayoutLegalPortrait()
 	if legalPortrait.PageWidth != PageWidthLegal {
@@ -255,7 +279,7 @@ func TestPageLayoutHelpers(t *testing.T) {
 	}
 
 	// All default margins should be 1440 (1 inch)
-	layouts := []*PageLayoutOptions{letterPortrait, letterLandscape, a4Portrait, a4Landscape, legalPortrait}
+	layouts := []*PageLayoutOptions{letterPortrait, letterLandscape, a4Portrait, a4Landscape, a3Portrait, a3Landscape, legalPortrait}
 	for i, layout := range layouts {
 		if layout.MarginTop != MarginDefault {
 			t.Errorf("Layout %d: top margin = %d, want %d", i, layout.MarginTop, MarginDefault)
