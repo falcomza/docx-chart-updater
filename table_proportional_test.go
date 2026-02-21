@@ -102,7 +102,7 @@ func TestTableProportionalColumnWidths(t *testing.T) {
 			{"2", "A much longer description here", "$19.99"},
 			{"3", "Medium length text", "$14.99"},
 		},
-		HeaderBold:                true,
+		HeaderBold:               true,
 		ProportionalColumnWidths: true,
 		// Column widths should be proportional to content length
 		// ID (2) : Description (31) : Price (7) = roughly 1:15:3
@@ -171,7 +171,7 @@ func TestTableProportionalWithFixedWidth(t *testing.T) {
 		Rows: [][]string{
 			{"X", "Y content here", "Z"},
 		},
-		HeaderBold:                true,
+		HeaderBold:               true,
 		ProportionalColumnWidths: true,
 		TableWidthType:           docxupdater.TableWidthFixed,
 		TableWidth:               8640, // 6 inches
@@ -233,7 +233,7 @@ func TestTableProportionalWithPercentageWidth(t *testing.T) {
 		Rows: [][]string{
 			{"S", "VeryLongContentHere", "M"},
 		},
-		HeaderBold:                true,
+		HeaderBold:               true,
 		ProportionalColumnWidths: true,
 		TableWidthType:           docxupdater.TableWidthPercentage,
 		TableWidth:               2500, // 50%
@@ -347,7 +347,7 @@ func TestTableProportionalIgnoredWithExplicitWidths(t *testing.T) {
 		Rows: [][]string{
 			{"1", "2", "3"},
 		},
-		HeaderBold:                true,
+		HeaderBold:               true,
 		ProportionalColumnWidths: true, // Should be ignored
 	})
 	if err != nil {

@@ -45,7 +45,7 @@ func TestProportionalTableWithTemplate(t *testing.T) {
 		TableWidthType:           docxupdater.TableWidthPercentage,
 		HeaderBold:               true,
 		HeaderBackground:         "4472C4",
-		AlternateRowColor:         "F2F2F2",
+		AlternateRowColor:        "F2F2F2",
 	})
 	if err != nil {
 		t.Fatalf("InsertTable with proportional widths failed: %v", err)
