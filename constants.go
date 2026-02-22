@@ -50,13 +50,6 @@ var (
 	// relIDPattern matches relationship IDs (e.g., rId1, rId2)
 	relIDPattern = regexp.MustCompile(`^rId(\d+)$`)
 
-	// chartRelPatternTemplate is a format string for matching specific chart relationships
-	// Use with fmt.Sprintf to insert the chart index
-	chartRelPatternTemplate = `Id="(rId[0-9]+)"[^>]*Target="charts/chart%d\.xml"`
-
-	// workbookNumberPattern matches numeric suffixes in workbook filenames
-	workbookNumberPattern = regexp.MustCompile(`^(.+?)(\d+)$`)
-
 	// textRunPattern matches Word text runs (<w:t ...>...</w:t>)
 	textRunPattern = regexp.MustCompile(`<w:t(?:\s[^>]*)?(>.*?</w:t>)`)
 
