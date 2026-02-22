@@ -1472,21 +1472,6 @@ func (u *Updater) findNextChartIndex() int {
 	return maxIndex + 1
 }
 
-// generateChartDrawingXML creates the inline drawing XML for a chart.
-func (u *Updater) generateChartDrawingXML(chartIndex int, relId string) ([]byte, error) {
-	docPrId, err := u.getNextDocPrId()
-	if err != nil {
-		return nil, fmt.Errorf("get next docPr id: %w", err)
-	}
-
-	const template = `<w:p><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0" wp14:anchorId="%08X" wp14:editId="%08X"><wp:extent cx="6099523" cy="3340467"/><wp:effectExtent l="0" t="0" r="15875" b="12700"/><wp:docPr id="%d" name="Chart %d"/><wp:cNvGraphicFramePr/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:id="%s"/></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`
-
-	anchorId := ChartAnchorIDBase + uint32(chartIndex)*ChartIDIncrement
-	editId := ChartEditIDBase + uint32(chartIndex)*ChartIDIncrement
-
-	return fmt.Appendf(nil, template, anchorId, editId, docPrId, chartIndex, relId), nil
-}
-
 // addChartRelationship appends a Relationship for a chart to document.xml.rels and returns its Id.
 func (u *Updater) addChartRelationship(chartIndex int) (string, error) {
 	relsPath := filepath.Join(u.tempDir, "word", "_rels", "document.xml.rels")
