@@ -130,28 +130,3 @@ func createZipFromDir(sourceDir, outZipPath string) error {
 
 	return nil
 }
-
-// copyFile copies a file from src to dst, creating destination directories as needed.
-func copyFile(src, dst string) error {
-	sourceFile, err := os.Open(src)
-	if err != nil {
-		return fmt.Errorf("open source: %w", err)
-	}
-	defer sourceFile.Close()
-
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return fmt.Errorf("create destination directory: %w", err)
-	}
-
-	destFile, err := os.Create(dst)
-	if err != nil {
-		return fmt.Errorf("create destination: %w", err)
-	}
-	defer destFile.Close()
-
-	if _, err := io.Copy(destFile, sourceFile); err != nil {
-		return fmt.Errorf("copy data: %w", err)
-	}
-
-	return nil
-}
