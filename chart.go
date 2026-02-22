@@ -597,7 +597,7 @@ func (u *Updater) insertChartDrawing(chartIndex int, relID string, opts ChartOpt
 		captionXML := generateCaptionXML(*opts.Caption)
 
 		// Combine chart and caption based on position
-		contentToInsert = insertCaptionWithElement(raw, captionXML, drawingXML, opts.Caption.Position)
+		contentToInsert = insertCaptionWithElement(captionXML, drawingXML, opts.Caption.Position)
 	}
 
 	// Insert based on position
@@ -1405,7 +1405,7 @@ func (u *Updater) insertExtendedChartDrawing(chartIndex int, relId string, opts 
 		captionXML := generateCaptionXML(*opts.Caption)
 
 		// Combine chart and caption based on position
-		contentToInsert = insertCaptionWithElement(raw, captionXML, drawing, opts.Caption.Position)
+		contentToInsert = insertCaptionWithElement(captionXML, drawing, opts.Caption.Position)
 	}
 
 	// Insert based on position

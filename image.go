@@ -94,7 +94,7 @@ func (u *Updater) InsertImage(opts ImageOptions) error {
 		captionXML := generateCaptionXML(*opts.Caption)
 
 		// Combine image and caption based on position
-		contentToInsert = insertCaptionWithElement(raw, captionXML, imageXML, opts.Caption.Position)
+		contentToInsert = insertCaptionWithElement(captionXML, imageXML, opts.Caption.Position)
 	} else {
 		contentToInsert = imageXML
 	}

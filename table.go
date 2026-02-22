@@ -698,7 +698,7 @@ func insertTableAtPosition(docXML, tableXML []byte, opts TableOptions) ([]byte, 
 		captionXML := generateCaptionXML(*opts.Caption)
 
 		// Combine table and caption based on position
-		contentToInsert = insertCaptionWithElement(docXML, captionXML, tableXML, opts.Caption.Position)
+		contentToInsert = insertCaptionWithElement(captionXML, tableXML, opts.Caption.Position)
 	}
 
 	switch opts.Position {

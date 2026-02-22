@@ -164,7 +164,7 @@ func generateSEQFieldXML(captionType CaptionType) string {
 
 // insertCaptionWithElement inserts a caption along with an element (chart/table)
 // The caption can be before or after the element based on CaptionPosition
-func insertCaptionWithElement(docXML, captionXML, elementXML []byte, position CaptionPosition) []byte {
+func insertCaptionWithElement(captionXML, elementXML []byte, position CaptionPosition) []byte {
 	var buf bytes.Buffer
 
 	if position == CaptionBefore {
