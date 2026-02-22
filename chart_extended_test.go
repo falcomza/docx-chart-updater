@@ -10,12 +10,12 @@ import (
 func TestInsertChartExtended(t *testing.T) {
 	tests := []struct {
 		name string
-		opts ExtendedChartOptions
+		opts ChartOptions
 		want error
 	}{
 		{
 			name: "minimal valid chart",
-			opts: ExtendedChartOptions{
+			opts: ChartOptions{
 				Categories: []string{"A", "B", "C"},
 				Series: []SeriesOptions{
 					{Name: "Series1", Values: []float64{1, 2, 3}},
@@ -25,7 +25,7 @@ func TestInsertChartExtended(t *testing.T) {
 		},
 		{
 			name: "empty categories",
-			opts: ExtendedChartOptions{
+			opts: ChartOptions{
 				Categories: []string{},
 				Series: []SeriesOptions{
 					{Name: "Series1", Values: []float64{1, 2, 3}},
@@ -35,7 +35,7 @@ func TestInsertChartExtended(t *testing.T) {
 		},
 		{
 			name: "empty series",
-			opts: ExtendedChartOptions{
+			opts: ChartOptions{
 				Categories: []string{"A", "B", "C"},
 				Series:     []SeriesOptions{},
 			},
@@ -43,7 +43,7 @@ func TestInsertChartExtended(t *testing.T) {
 		},
 		{
 			name: "mismatched values length",
-			opts: ExtendedChartOptions{
+			opts: ChartOptions{
 				Categories: []string{"A", "B", "C"},
 				Series: []SeriesOptions{
 					{Name: "Series1", Values: []float64{1, 2}}, // Only 2 values
@@ -53,7 +53,7 @@ func TestInsertChartExtended(t *testing.T) {
 		},
 		{
 			name: "empty series name",
-			opts: ExtendedChartOptions{
+			opts: ChartOptions{
 				Categories: []string{"A", "B", "C"},
 				Series: []SeriesOptions{
 					{Name: "", Values: []float64{1, 2, 3}},
@@ -79,13 +79,13 @@ func TestInsertChartExtended(t *testing.T) {
 			}
 			defer updater.Save(outputPath)
 
-			err = updater.InsertChartExtended(tt.opts)
+			err = updater.InsertChart(tt.opts)
 
 			if tt.want == nil && err != nil {
-				t.Errorf("InsertChartExtended() unexpected error = %v", err)
+				t.Errorf("InsertChart() unexpected error = %v", err)
 			}
 			if tt.want != nil && err == nil {
-				t.Errorf("InsertChartExtended() expected error but got none")
+				t.Errorf("InsertChart() expected error but got none")
 			}
 		})
 	}
@@ -94,12 +94,12 @@ func TestInsertChartExtended(t *testing.T) {
 func TestValidateExtendedChartOptions(t *testing.T) {
 	tests := []struct {
 		name    string
-		opts    ExtendedChartOptions
+		opts    ChartOptions
 		wantErr bool
 	}{
 		{
 			name: "valid options",
-			opts: ExtendedChartOptions{
+			opts: ChartOptions{
 				Categories: []string{"A", "B"},
 				Series: []SeriesOptions{
 					{Name: "S1", Values: []float64{1, 2}},
@@ -109,7 +109,7 @@ func TestValidateExtendedChartOptions(t *testing.T) {
 		},
 		{
 			name: "invalid axis min/max",
-			opts: ExtendedChartOptions{
+			opts: ChartOptions{
 				Categories: []string{"A", "B"},
 				Series: []SeriesOptions{
 					{Name: "S1", Values: []float64{1, 2}},
@@ -123,7 +123,7 @@ func TestValidateExtendedChartOptions(t *testing.T) {
 		},
 		{
 			name: "invalid gap width",
-			opts: ExtendedChartOptions{
+			opts: ChartOptions{
 				Categories: []string{"A", "B"},
 				Series: []SeriesOptions{
 					{Name: "S1", Values: []float64{1, 2}},
@@ -136,7 +136,7 @@ func TestValidateExtendedChartOptions(t *testing.T) {
 		},
 		{
 			name: "invalid overlap",
-			opts: ExtendedChartOptions{
+			opts: ChartOptions{
 				Categories: []string{"A", "B"},
 				Series: []SeriesOptions{
 					{Name: "S1", Values: []float64{1, 2}},
@@ -151,9 +151,9 @@ func TestValidateExtendedChartOptions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateExtendedChartOptions(tt.opts)
+			err := validateChartOptions(tt.opts)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validateExtendedChartOptions() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("validateChartOptions() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -161,38 +161,35 @@ func TestValidateExtendedChartOptions(t *testing.T) {
 
 func TestApplyExtendedChartDefaults(t *testing.T) {
 	t.Run("applies chart kind default", func(t *testing.T) {
-		opts := ExtendedChartOptions{
+		opts := ChartOptions{
 			Categories: []string{"A"},
 			Series:     []SeriesOptions{{Name: "S1", Values: []float64{1}}},
 		}
-		result := applyExtendedChartDefaults(opts)
+		result := applyChartDefaults(opts)
 		if result.ChartKind != ChartKindColumn {
 			t.Errorf("Expected ChartKindColumn, got %v", result.ChartKind)
 		}
 	})
 
 	t.Run("applies dimensions default", func(t *testing.T) {
-		opts := ExtendedChartOptions{
+		opts := ChartOptions{
 			Categories: []string{"A"},
 			Series:     []SeriesOptions{{Name: "S1", Values: []float64{1}}},
 		}
-		result := applyExtendedChartDefaults(opts)
+		result := applyChartDefaults(opts)
 		if result.Width == 0 || result.Height == 0 {
 			t.Errorf("Expected non-zero dimensions, got Width=%d, Height=%d", result.Width, result.Height)
 		}
 	})
 
 	t.Run("applies legend defaults", func(t *testing.T) {
-		opts := ExtendedChartOptions{
+		opts := ChartOptions{
 			Categories: []string{"A"},
 			Series:     []SeriesOptions{{Name: "S1", Values: []float64{1}}},
 		}
-		result := applyExtendedChartDefaults(opts)
+		result := applyChartDefaults(opts)
 		if result.Legend == nil {
 			t.Fatal("Expected legend to be initialized")
-		}
-		if !result.Legend.Show {
-			t.Error("Expected legend to be shown by default")
 		}
 		if result.Legend.Position != "r" {
 			t.Errorf("Expected legend position 'r', got %v", result.Legend.Position)
@@ -200,11 +197,11 @@ func TestApplyExtendedChartDefaults(t *testing.T) {
 	})
 
 	t.Run("applies axis defaults", func(t *testing.T) {
-		opts := ExtendedChartOptions{
+		opts := ChartOptions{
 			Categories: []string{"A"},
 			Series:     []SeriesOptions{{Name: "S1", Values: []float64{1}}},
 		}
-		result := applyExtendedChartDefaults(opts)
+		result := applyChartDefaults(opts)
 
 		if result.CategoryAxis == nil {
 			t.Fatal("Expected category axis to be initialized")
@@ -225,12 +222,12 @@ func TestApplyExtendedChartDefaults(t *testing.T) {
 	})
 
 	t.Run("applies bar chart defaults", func(t *testing.T) {
-		opts := ExtendedChartOptions{
+		opts := ChartOptions{
 			ChartKind:  ChartKindColumn,
 			Categories: []string{"A"},
 			Series:     []SeriesOptions{{Name: "S1", Values: []float64{1}}},
 		}
-		result := applyExtendedChartDefaults(opts)
+		result := applyChartDefaults(opts)
 
 		if result.BarChartOptions == nil {
 			t.Fatal("Expected bar chart options to be initialized")
@@ -247,11 +244,11 @@ func TestApplyExtendedChartDefaults(t *testing.T) {
 	})
 
 	t.Run("applies chart properties defaults", func(t *testing.T) {
-		opts := ExtendedChartOptions{
+		opts := ChartOptions{
 			Categories: []string{"A"},
 			Series:     []SeriesOptions{{Name: "S1", Values: []float64{1}}},
 		}
-		result := applyExtendedChartDefaults(opts)
+		result := applyChartDefaults(opts)
 
 		if result.Properties == nil {
 			t.Fatal("Expected properties to be initialized")
@@ -270,15 +267,15 @@ func TestApplyExtendedChartDefaults(t *testing.T) {
 
 func TestGenerateExtendedChartXML(t *testing.T) {
 	t.Run("generates valid XML with minimal options", func(t *testing.T) {
-		opts := ExtendedChartOptions{
+		opts := ChartOptions{
 			Categories: []string{"A", "B", "C"},
 			Series: []SeriesOptions{
 				{Name: "Series1", Values: []float64{1, 2, 3}},
 			},
 		}
-		opts = applyExtendedChartDefaults(opts)
+		opts = applyChartDefaults(opts)
 
-		xml := generateExtendedChartXML(opts)
+		xml := generateChartXML(opts)
 		xmlStr := string(xml)
 
 		// Verify XML declaration
@@ -314,7 +311,7 @@ func TestGenerateExtendedChartXML(t *testing.T) {
 		minVal := 0.0
 		maxVal := 100.0
 
-		opts := ExtendedChartOptions{
+		opts := ChartOptions{
 			Categories: []string{"A", "B"},
 			Series: []SeriesOptions{
 				{Name: "Series1", Values: []float64{50, 75}},
@@ -326,9 +323,9 @@ func TestGenerateExtendedChartXML(t *testing.T) {
 				NumberFormat: "#,##0",
 			},
 		}
-		opts = applyExtendedChartDefaults(opts)
+		opts = applyChartDefaults(opts)
 
-		xml := string(generateExtendedChartXML(opts))
+		xml := string(generateChartXML(opts))
 
 		if !containsString(xml, "Custom Axis") {
 			t.Error("Missing custom axis title")
@@ -342,7 +339,7 @@ func TestGenerateExtendedChartXML(t *testing.T) {
 	})
 
 	t.Run("generates XML with data labels", func(t *testing.T) {
-		opts := ExtendedChartOptions{
+		opts := ChartOptions{
 			Categories: []string{"A", "B"},
 			Series: []SeriesOptions{
 				{Name: "Series1", Values: []float64{10, 20}},
@@ -353,9 +350,9 @@ func TestGenerateExtendedChartXML(t *testing.T) {
 				Position:    DataLabelOutsideEnd,
 			},
 		}
-		opts = applyExtendedChartDefaults(opts)
+		opts = applyChartDefaults(opts)
 
-		xml := string(generateExtendedChartXML(opts))
+		xml := string(generateChartXML(opts))
 
 		if !containsString(xml, "<c:showVal val=\"1\"") {
 			t.Error("Missing showVal=1 for data labels")
@@ -366,7 +363,7 @@ func TestGenerateExtendedChartXML(t *testing.T) {
 	})
 
 	t.Run("generates XML with custom colors", func(t *testing.T) {
-		opts := ExtendedChartOptions{
+		opts := ChartOptions{
 			Categories: []string{"A", "B"},
 			Series: []SeriesOptions{
 				{
@@ -376,9 +373,9 @@ func TestGenerateExtendedChartXML(t *testing.T) {
 				},
 			},
 		}
-		opts = applyExtendedChartDefaults(opts)
+		opts = applyChartDefaults(opts)
 
-		xml := string(generateExtendedChartXML(opts))
+		xml := string(generateChartXML(opts))
 
 		if !containsString(xml, "FF0000") {
 			t.Error("Missing custom color")
@@ -387,7 +384,7 @@ func TestGenerateExtendedChartXML(t *testing.T) {
 }
 
 func TestChartTypeXMLGeneration(t *testing.T) {
-	baseOpts := ExtendedChartOptions{
+	baseOpts := ChartOptions{
 		Categories: []string{"A", "B"},
 		Series: []SeriesOptions{
 			{Name: "Series1", Values: []float64{10, 20}},
@@ -410,9 +407,9 @@ func TestChartTypeXMLGeneration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			opts := baseOpts
 			opts.ChartKind = tt.chartKind
-			opts = applyExtendedChartDefaults(opts)
+			opts = applyChartDefaults(opts)
 
-			xml := string(generateExtendedChartXML(opts))
+			xml := string(generateChartXML(opts))
 
 			if !containsString(xml, tt.contains) {
 				t.Errorf("Expected XML to contain %s", tt.contains)
@@ -422,7 +419,7 @@ func TestChartTypeXMLGeneration(t *testing.T) {
 }
 
 func TestLineChartSpecificOptions(t *testing.T) {
-	opts := ExtendedChartOptions{
+	opts := ChartOptions{
 		ChartKind:  ChartKindLine,
 		Categories: []string{"A", "B", "C"},
 		Series: []SeriesOptions{
@@ -434,9 +431,9 @@ func TestLineChartSpecificOptions(t *testing.T) {
 			},
 		},
 	}
-	opts = applyExtendedChartDefaults(opts)
+	opts = applyChartDefaults(opts)
 
-	xml := string(generateExtendedChartXML(opts))
+	xml := string(generateChartXML(opts))
 
 	if !containsString(xml, "<c:smooth val=\"1\"") {
 		t.Error("Missing smooth line option")

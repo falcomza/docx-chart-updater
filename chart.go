@@ -32,14 +32,15 @@ type ChartOptions struct {
 
 	// Chart titles
 	Title             string // Main chart title
-	CategoryAxisTitle string // X-axis title (horizontal axis)
-	ValueAxisTitle    string // Y-axis title (vertical axis)
+	TitleOverlay      bool   // Overlays the title on the chart area
+	CategoryAxisTitle string // X-axis title (horizontal axis) — backward compat, prefer CategoryAxis.Title
+	ValueAxisTitle    string // Y-axis title (vertical axis) — backward compat, prefer ValueAxis.Title
 
 	// Data
-	Categories     []string     // Category labels (X-axis)
-	Series         []SeriesData // Data series with names and values
-	ShowLegend     bool         // Show legend (default: true)
-	LegendPosition string       // Legend position: "r" (right), "l" (left), "t" (top), "b" (bottom)
+	Categories     []string       // Category labels (X-axis)
+	Series         []SeriesOptions // Data series with names and values
+	ShowLegend     bool           // Show legend — backward compat, prefer Legend.Show
+	LegendPosition string         // Legend position — backward compat, prefer Legend.Position
 
 	// Chart dimensions (default: spans between margins)
 	Width  int // Width in EMUs (English Metric Units), 0 for default (6099523 = ~6.5")
@@ -47,6 +48,22 @@ type ChartOptions struct {
 
 	// Caption options (nil for no caption)
 	Caption *CaptionOptions
+
+	// Extended axis customization (nil = auto defaults)
+	CategoryAxis *AxisOptions
+	ValueAxis    *AxisOptions
+
+	// Legend customization (nil = derives from ShowLegend/LegendPosition)
+	Legend *LegendOptions
+
+	// Default data labels for all series (nil = no labels)
+	DataLabels *DataLabelOptions
+
+	// Chart-level rendering properties (nil = library defaults)
+	Properties *ChartProperties
+
+	// Bar/column-specific options (nil = clustered column defaults)
+	BarChartOptions *BarChartOptions
 }
 
 // InsertChart creates a new chart and inserts it into the document
@@ -122,23 +139,134 @@ func validateChartOptions(opts ChartOptions) error {
 		}
 	}
 
+	// Validate axes if provided
+	if opts.CategoryAxis != nil {
+		if err := validateAxisOptions("CategoryAxis", opts.CategoryAxis); err != nil {
+			return err
+		}
+	}
+	if opts.ValueAxis != nil {
+		if err := validateAxisOptions("ValueAxis", opts.ValueAxis); err != nil {
+			return err
+		}
+	}
+
+	// Validate bar chart options if provided
+	if opts.BarChartOptions != nil {
+		if opts.BarChartOptions.GapWidth < 0 || opts.BarChartOptions.GapWidth > 500 {
+			return fmt.Errorf("BarChartOptions.GapWidth must be between 0 and 500")
+		}
+		if opts.BarChartOptions.Overlap < -100 || opts.BarChartOptions.Overlap > 100 {
+			return fmt.Errorf("BarChartOptions.Overlap must be between -100 and 100")
+		}
+	}
+
+	return nil
+}
+
+// validateAxisOptions validates axis options
+func validateAxisOptions(name string, axis *AxisOptions) error {
+	if axis.Min != nil && axis.Max != nil && *axis.Min >= *axis.Max {
+		return fmt.Errorf("%s: Min must be less than Max", name)
+	}
+	if axis.MajorUnit != nil && *axis.MajorUnit <= 0 {
+		return fmt.Errorf("%s: MajorUnit must be positive", name)
+	}
+	if axis.MinorUnit != nil && *axis.MinorUnit <= 0 {
+		return fmt.Errorf("%s: MinorUnit must be positive", name)
+	}
+	if axis.MajorUnit != nil && axis.MinorUnit != nil && *axis.MinorUnit >= *axis.MajorUnit {
+		return fmt.Errorf("%s: MinorUnit must be less than MajorUnit", name)
+	}
 	return nil
 }
 
 // applyChartDefaults sets default values for unspecified options
 func applyChartDefaults(opts ChartOptions) ChartOptions {
+	// Basic defaults
 	if opts.ChartKind == "" {
 		opts.ChartKind = ChartKindColumn
 	}
 	if opts.Width == 0 {
-		opts.Width = 6099523 // ~6.5 inches (spans between margins on letter-size page)
+		opts.Width = 6099523 // ~6.5 inches
 	}
 	if opts.Height == 0 {
 		opts.Height = 3340467 // ~3.5 inches
 	}
-	if opts.ShowLegend && opts.LegendPosition == "" {
-		opts.LegendPosition = "r" // Right by default
+
+	// Apply legend defaults — honour backward-compat ShowLegend/LegendPosition fields
+	if opts.Legend == nil {
+		pos := opts.LegendPosition
+		if pos == "" {
+			pos = "r"
+		}
+		opts.Legend = &LegendOptions{
+			Show:     opts.ShowLegend,
+			Position: pos,
+			Overlay:  false,
+		}
 	}
+
+	// Apply category axis defaults — honour backward-compat CategoryAxisTitle
+	if opts.CategoryAxis == nil {
+		opts.CategoryAxis = &AxisOptions{}
+		if opts.CategoryAxisTitle != "" {
+			opts.CategoryAxis.Title = opts.CategoryAxisTitle
+		}
+	}
+	opts.CategoryAxis = applyAxisDefaults(opts.CategoryAxis, true)
+
+	// Apply value axis defaults — honour backward-compat ValueAxisTitle
+	if opts.ValueAxis == nil {
+		opts.ValueAxis = &AxisOptions{}
+		if opts.ValueAxisTitle != "" {
+			opts.ValueAxis.Title = opts.ValueAxisTitle
+		}
+	}
+	opts.ValueAxis = applyAxisDefaults(opts.ValueAxis, false)
+
+	// Apply chart properties defaults
+	if opts.Properties == nil {
+		opts.Properties = &ChartProperties{}
+	}
+	if opts.Properties.Style == 0 {
+		opts.Properties.Style = ChartStyle2
+	}
+	if opts.Properties.Language == "" {
+		opts.Properties.Language = "en-US"
+	}
+	if opts.Properties.DisplayBlanksAs == "" {
+		opts.Properties.DisplayBlanksAs = "gap"
+	}
+	opts.Properties.PlotVisibleOnly = true // Always true
+
+	// Apply bar chart defaults if chart is bar/column type
+	if opts.ChartKind == ChartKindColumn || opts.ChartKind == ChartKindBar {
+		if opts.BarChartOptions == nil {
+			opts.BarChartOptions = &BarChartOptions{}
+		}
+		if opts.BarChartOptions.Direction == "" {
+			if opts.ChartKind == ChartKindColumn {
+				opts.BarChartOptions.Direction = BarDirectionColumn
+			} else {
+				opts.BarChartOptions.Direction = BarDirectionBar
+			}
+		}
+		if opts.BarChartOptions.Grouping == "" {
+			opts.BarChartOptions.Grouping = BarGroupingClustered
+		}
+		if opts.BarChartOptions.GapWidth == 0 {
+			opts.BarChartOptions.GapWidth = 150
+		}
+	}
+
+	// Apply data label defaults if specified
+	if opts.DataLabels != nil {
+		if opts.DataLabels.Position == "" {
+			opts.DataLabels.Position = DataLabelBestFit
+		}
+	}
+
 	return opts
 }
 
@@ -157,7 +285,7 @@ func (u *Updater) createChartXML(chartPath string, opts ChartOptions) error {
 	return nil
 }
 
-// generateChartXML creates the chart XML content
+// generateChartXML creates the chart XML content with all extended options
 func generateChartXML(opts ChartOptions) []byte {
 	var buf bytes.Buffer
 
@@ -165,37 +293,27 @@ func generateChartXML(opts ChartOptions) []byte {
 	buf.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`)
 	buf.WriteString("\n")
 
-	// chartSpace with all standard namespaces (Word requires these for compatibility)
+	// chartSpace with all standard namespaces
 	buf.WriteString(`<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"`)
 	buf.WriteString(` xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"`)
 	buf.WriteString(` xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"`)
 	buf.WriteString(` xmlns:c16r2="http://schemas.microsoft.com/office/drawing/2015/06/chart">`)
 
-	// Chart properties (Word expects these even if not modified)
-	buf.WriteString(`<c:date1904 val="0"/>`)
-	buf.WriteString(`<c:lang val="en-US"/>`)
-	buf.WriteString(`<c:roundedCorners val="0"/>`)
+	// Chart properties
+	buf.WriteString(fmt.Sprintf(`<c:date1904 val="%d"/>`, boolToInt(opts.Properties.Date1904)))
+	buf.WriteString(fmt.Sprintf(`<c:lang val="%s"/>`, opts.Properties.Language))
+	buf.WriteString(fmt.Sprintf(`<c:roundedCorners val="%d"/>`, boolToInt(opts.Properties.RoundedCorners)))
+
+	// Chart style (if not default)
+	if opts.Properties.Style > 0 {
+		buf.WriteString(fmt.Sprintf(`<c:style val="%d"/>`, opts.Properties.Style))
+	}
 
 	buf.WriteString(`<c:chart>`)
 
 	// Chart title
 	if opts.Title != "" {
-		buf.WriteString(`<c:title>`)
-		buf.WriteString(`<c:tx>`)
-		buf.WriteString(`<c:rich>`)
-		buf.WriteString(`<a:bodyPr/>`)
-		buf.WriteString(`<a:lstStyle/>`)
-		buf.WriteString(`<a:p>`)
-		buf.WriteString(`<a:pPr><a:defRPr/></a:pPr>`)
-		buf.WriteString(`<a:r><a:rPr lang="en-US"/><a:t>`)
-		buf.WriteString(xmlEscape(opts.Title))
-		buf.WriteString(`</a:t></a:r>`)
-		buf.WriteString(`</a:p>`)
-		buf.WriteString(`</c:rich>`)
-		buf.WriteString(`</c:tx>`)
-		buf.WriteString(`<c:layout/>`)
-		buf.WriteString(`<c:overlay val="0"/>`)
-		buf.WriteString(`</c:title>`)
+		buf.WriteString(generateTitleXML(opts.Title, opts.TitleOverlay))
 	}
 
 	buf.WriteString(`<c:autoTitleDeleted val="0"/>`)
@@ -204,74 +322,34 @@ func generateChartXML(opts ChartOptions) []byte {
 
 	// Generate chart type specific content
 	switch opts.ChartKind {
-	case ChartKindColumn:
-		buf.WriteString(generateColumnChartXML(opts))
+	case "barChart": // ChartKindColumn and ChartKindBar both use barChart
+		buf.WriteString(generateBarChartXML(opts))
+	case ChartKindLine:
+		buf.WriteString(generateLineChartXML(opts))
+	case ChartKindPie:
+		buf.WriteString(generatePieChartXML(opts))
+	case ChartKindArea:
+		buf.WriteString(generateAreaChartXML(opts))
 	default:
-		buf.WriteString(generateColumnChartXML(opts)) // Default to column
+		buf.WriteString(generateBarChartXML(opts)) // Default to bar/column
 	}
 
-	// Category axis
-	buf.WriteString(`<c:catAx>`)
-	buf.WriteString(`<c:axId val="2071991400"/>`)
-	buf.WriteString(`<c:scaling><c:orientation val="minMax"/></c:scaling>`)
-	buf.WriteString(`<c:delete val="0"/>`)
-	buf.WriteString(`<c:axPos val="b"/>`)
-	if opts.CategoryAxisTitle != "" {
-		buf.WriteString(`<c:title>`)
-		buf.WriteString(`<c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr/></a:pPr><a:r><a:rPr lang="en-US"/><a:t>`)
-		buf.WriteString(xmlEscape(opts.CategoryAxisTitle))
-		buf.WriteString(`</a:t></a:r></a:p></c:rich></c:tx>`)
-		buf.WriteString(`<c:layout/><c:overlay val="0"/>`)
-		buf.WriteString(`</c:title>`)
+	// Axes (category and value for most chart types, except pie)
+	if opts.ChartKind != ChartKindPie {
+		buf.WriteString(generateCategoryAxisXML(opts.CategoryAxis))
+		buf.WriteString(generateValueAxisXML(opts.ValueAxis))
 	}
-	buf.WriteString(`<c:numFmt formatCode="General" sourceLinked="1"/>`)
-	buf.WriteString(`<c:majorTickMark val="out"/>`)
-	buf.WriteString(`<c:minorTickMark val="none"/>`)
-	buf.WriteString(`<c:tickLblPos val="nextTo"/>`)
-	buf.WriteString(`<c:crossAx val="2071991240"/>`)
-	buf.WriteString(`<c:crosses val="autoZero"/>`)
-	buf.WriteString(`<c:auto val="1"/>`)
-	buf.WriteString(`<c:lblAlgn val="ctr"/>`)
-	buf.WriteString(`<c:lblOffset val="100"/>`)
-	buf.WriteString(`</c:catAx>`)
-
-	// Value axis
-	buf.WriteString(`<c:valAx>`)
-	buf.WriteString(`<c:axId val="2071991240"/>`)
-	buf.WriteString(`<c:scaling><c:orientation val="minMax"/></c:scaling>`)
-	buf.WriteString(`<c:delete val="0"/>`)
-	buf.WriteString(`<c:axPos val="l"/>`)
-	if opts.ValueAxisTitle != "" {
-		buf.WriteString(`<c:title>`)
-		buf.WriteString(`<c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr/></a:pPr><a:r><a:rPr lang="en-US"/><a:t>`)
-		buf.WriteString(xmlEscape(opts.ValueAxisTitle))
-		buf.WriteString(`</a:t></a:r></a:p></c:rich></c:tx>`)
-		buf.WriteString(`<c:layout/><c:overlay val="0"/>`)
-		buf.WriteString(`</c:title>`)
-	}
-	buf.WriteString(`<c:numFmt formatCode="General" sourceLinked="1"/>`)
-	buf.WriteString(`<c:majorTickMark val="out"/>`)
-	buf.WriteString(`<c:minorTickMark val="none"/>`)
-	buf.WriteString(`<c:tickLblPos val="nextTo"/>`)
-	buf.WriteString(`<c:crossAx val="2071991400"/>`)
-	buf.WriteString(`<c:crosses val="autoZero"/>`)
-	buf.WriteString(`<c:crossBetween val="between"/>`)
-	buf.WriteString(`</c:valAx>`)
 
 	buf.WriteString(`</c:plotArea>`)
 
 	// Legend
-	if opts.ShowLegend {
-		buf.WriteString(`<c:legend>`)
-		buf.WriteString(fmt.Sprintf(`<c:legendPos val="%s"/>`, opts.LegendPosition))
-		buf.WriteString(`<c:layout/>`)
-		buf.WriteString(`<c:overlay val="0"/>`)
-		buf.WriteString(`</c:legend>`)
+	if opts.Legend.Show {
+		buf.WriteString(generateLegendXML(opts.Legend))
 	}
 
-	buf.WriteString(`<c:plotVisOnly val="1"/>`)
-	buf.WriteString(`<c:dispBlanksAs val="gap"/>`)
-	buf.WriteString(`<c:showDLblsOverMax val="0"/>`)
+	buf.WriteString(fmt.Sprintf(`<c:plotVisOnly val="%d"/>`, boolToInt(opts.Properties.PlotVisibleOnly)))
+	buf.WriteString(fmt.Sprintf(`<c:dispBlanksAs val="%s"/>`, opts.Properties.DisplayBlanksAs))
+	buf.WriteString(fmt.Sprintf(`<c:showDLblsOverMax val="%d"/>`, boolToInt(opts.Properties.ShowDataLabelsOverMax)))
 
 	buf.WriteString(`</c:chart>`)
 
@@ -285,83 +363,111 @@ func generateChartXML(opts ChartOptions) []byte {
 	return buf.Bytes()
 }
 
-// generateColumnChartXML generates column chart specific XML
-func generateColumnChartXML(opts ChartOptions) string {
+// generateBarChartXML generates bar/column chart XML with extended options
+func generateBarChartXML(opts ChartOptions) string {
 	var buf bytes.Buffer
 
 	buf.WriteString(`<c:barChart>`)
-	buf.WriteString(`<c:barDir val="col"/>`) // Column direction (col=vertical, bar=horizontal)
-	buf.WriteString(`<c:grouping val="clustered"/>`)
+	buf.WriteString(fmt.Sprintf(`<c:barDir val="%s"/>`, opts.BarChartOptions.Direction))
+	buf.WriteString(fmt.Sprintf(`<c:grouping val="%s"/>`, opts.BarChartOptions.Grouping))
+	buf.WriteString(fmt.Sprintf(`<c:varyColors val="%d"/>`, boolToInt(opts.BarChartOptions.VaryColors)))
+
+	// Series
+	for i, series := range opts.Series {
+		buf.WriteString(generateSeriesXML(i, series, opts))
+	}
+
+	// Data labels (chart-level default)
+	if opts.DataLabels != nil {
+		buf.WriteString(generateDataLabelsXML(opts.DataLabels))
+	} else {
+		buf.WriteString(`<c:dLbls><c:showLegendKey val="0"/><c:showVal val="0"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>`)
+	}
+
+	buf.WriteString(fmt.Sprintf(`<c:gapWidth val="%d"/>`, opts.BarChartOptions.GapWidth))
+	buf.WriteString(fmt.Sprintf(`<c:overlap val="%d"/>`, opts.BarChartOptions.Overlap))
+	buf.WriteString(`<c:axId val="2071991400"/>`)
+	buf.WriteString(`<c:axId val="2071991240"/>`)
+	buf.WriteString(`</c:barChart>`)
+
+	return buf.String()
+}
+
+// generateLineChartXML generates line chart XML with extended options
+func generateLineChartXML(opts ChartOptions) string {
+	var buf bytes.Buffer
+
+	buf.WriteString(`<c:lineChart>`)
+	buf.WriteString(`<c:grouping val="standard"/>`)
 	buf.WriteString(`<c:varyColors val="0"/>`)
 
 	// Series
 	for i, series := range opts.Series {
-		buf.WriteString(fmt.Sprintf(`<c:ser>
-<c:idx val="%d"/>
-<c:order val="%d"/>
-<c:tx>
-  <c:strRef>
-    <c:f>Sheet1!$%s$1</c:f>
-    <c:strCache>
-      <c:ptCount val="1"/>
-      <c:pt idx="0"><c:v>%s</c:v></c:pt>
-    </c:strCache>
-  </c:strRef>
-</c:tx>`, i, i, columnLetter(i+1), xmlEscape(series.Name)))
-
-		buf.WriteString(`<c:cat>
-  <c:strRef>
-    <c:f>Sheet1!$A$2:$A$`)
-		buf.WriteString(fmt.Sprintf("%d", len(opts.Categories)+1))
-		buf.WriteString(`</c:f>
-    <c:strCache>
-      <c:ptCount val="`)
-		buf.WriteString(fmt.Sprintf("%d", len(opts.Categories)))
-		buf.WriteString(`"/>`)
-		for j, cat := range opts.Categories {
-			buf.WriteString(fmt.Sprintf(`<c:pt  idx="%d"><c:v>%s</c:v></c:pt>`, j, xmlEscape(cat)))
-		}
-		buf.WriteString(`</c:strCache>
-  </c:strRef>
-</c:cat>`)
-
-		buf.WriteString(`<c:val>
-  <c:numRef>
-    <c:f>Sheet1!$`)
-		buf.WriteString(columnLetter(i + 1))
-		buf.WriteString(`$2:$`)
-		buf.WriteString(columnLetter(i + 1))
-		buf.WriteString(`$`)
-		buf.WriteString(fmt.Sprintf("%d", len(opts.Categories)+1))
-		buf.WriteString(`</c:f>
-    <c:numCache>
-      <c:formatCode>General</c:formatCode>
-      <c:ptCount val="`)
-		buf.WriteString(fmt.Sprintf("%d", len(series.Values)))
-		buf.WriteString(`"/>`)
-		for j, val := range series.Values {
-			buf.WriteString(fmt.Sprintf(`<c:pt idx="%d"><c:v>%g</c:v></c:pt>`, j, val))
-		}
-		buf.WriteString(`</c:numCache>
-  </c:numRef>
-</c:val>`)
-
-		// Add color if specified
-		if color := normalizeHexColor(series.Color); color != "" {
-			buf.WriteString(`<c:spPr><a:solidFill><a:srgbClr val="`)
-			buf.WriteString(color)
-			buf.WriteString(`"/></a:solidFill></c:spPr>`)
-		}
-
-		buf.WriteString(`</c:ser>`)
+		buf.WriteString(generateSeriesXML(i, series, opts))
 	}
 
-	buf.WriteString(`<c:dLbls><c:showLegendKey val="0"/><c:showVal val="0"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>`)
-	buf.WriteString(`<c:gapWidth val="150"/>`)
-	buf.WriteString(`<c:overlap val="0"/>`)
+	// Data labels
+	if opts.DataLabels != nil {
+		buf.WriteString(generateDataLabelsXML(opts.DataLabels))
+	} else {
+		buf.WriteString(`<c:dLbls><c:showLegendKey val="0"/><c:showVal val="0"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>`)
+	}
+
 	buf.WriteString(`<c:axId val="2071991400"/>`)
 	buf.WriteString(`<c:axId val="2071991240"/>`)
-	buf.WriteString(`</c:barChart>`)
+	buf.WriteString(`</c:lineChart>`)
+
+	return buf.String()
+}
+
+// generatePieChartXML generates pie chart XML with extended options
+func generatePieChartXML(opts ChartOptions) string {
+	var buf bytes.Buffer
+
+	buf.WriteString(`<c:pieChart>`)
+	buf.WriteString(`<c:varyColors val="1"/>`) // Pie charts typically vary colors
+
+	// Series (pie charts usually have one series)
+	for i, series := range opts.Series {
+		buf.WriteString(generateSeriesXML(i, series, opts))
+	}
+
+	// Data labels
+	if opts.DataLabels != nil {
+		buf.WriteString(generateDataLabelsXML(opts.DataLabels))
+	} else {
+		buf.WriteString(`<c:dLbls><c:showLegendKey val="0"/><c:showVal val="0"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="1"/><c:showBubbleSize val="0"/>`)
+		buf.WriteString(`<c:showLeaderLines val="1"/></c:dLbls>`)
+	}
+
+	buf.WriteString(`</c:pieChart>`)
+
+	return buf.String()
+}
+
+// generateAreaChartXML generates area chart XML with extended options
+func generateAreaChartXML(opts ChartOptions) string {
+	var buf bytes.Buffer
+
+	buf.WriteString(`<c:areaChart>`)
+	buf.WriteString(`<c:grouping val="standard"/>`)
+	buf.WriteString(`<c:varyColors val="0"/>`)
+
+	// Series
+	for i, series := range opts.Series {
+		buf.WriteString(generateSeriesXML(i, series, opts))
+	}
+
+	// Data labels
+	if opts.DataLabels != nil {
+		buf.WriteString(generateDataLabelsXML(opts.DataLabels))
+	} else {
+		buf.WriteString(`<c:dLbls><c:showLegendKey val="0"/><c:showVal val="0"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>`)
+	}
+
+	buf.WriteString(`<c:axId val="2071991400"/>`)
+	buf.WriteString(`<c:axId val="2071991240"/>`)
+	buf.WriteString(`</c:areaChart>`)
 
 	return buf.String()
 }
@@ -649,204 +755,6 @@ func (u *Updater) generateChartDrawingWithSize(chartIndex int, relId string, wid
 	return fmt.Appendf(nil, template, anchorId, editId, width, height, docPrId, chartIndex, relId), nil
 }
 
-// ==================== Extended Chart Functionality ====================
-
-// InsertChartExtended creates a chart with comprehensive customization options
-func (u *Updater) InsertChartExtended(opts ExtendedChartOptions) error {
-	if u == nil {
-		return fmt.Errorf("updater is nil")
-	}
-
-	// Validate options
-	if err := validateExtendedChartOptions(opts); err != nil {
-		return fmt.Errorf("invalid extended chart options: %w", err)
-	}
-
-	// Apply defaults
-	opts = applyExtendedChartDefaults(opts)
-
-	// Find next available chart index
-	chartIndex := u.findNextChartIndex()
-
-	// Create chart XML file
-	chartPath := filepath.Join(u.tempDir, "word", "charts", fmt.Sprintf("chart%d.xml", chartIndex))
-	if err := u.createExtendedChartXML(chartPath, opts); err != nil {
-		return fmt.Errorf("create chart xml: %w", err)
-	}
-
-	// Create embedded workbook (convert to simple format)
-	workbookOpts := convertToChartOptions(opts)
-	workbookPath := filepath.Join(u.tempDir, "word", "embeddings", fmt.Sprintf("Microsoft_Excel_Worksheet%d.xlsx", chartIndex))
-	if err := u.createEmbeddedWorkbook(workbookPath, workbookOpts); err != nil {
-		return fmt.Errorf("create embedded workbook: %w", err)
-	}
-
-	// Create chart relationships file
-	chartRelsPath := filepath.Join(u.tempDir, "word", "charts", "_rels", fmt.Sprintf("chart%d.xml.rels", chartIndex))
-	if err := u.createChartRelationships(chartRelsPath, workbookPath); err != nil {
-		return fmt.Errorf("create chart relationships: %w", err)
-	}
-
-	// Add chart relationship to document.xml.rels
-	relID, err := u.addChartRelationship(chartIndex)
-	if err != nil {
-		return fmt.Errorf("add chart relationship: %w", err)
-	}
-
-	// Insert chart drawing into document
-	if err := u.insertExtendedChartDrawing(chartIndex, relID, opts); err != nil {
-		return fmt.Errorf("insert chart drawing: %w", err)
-	}
-
-	// Update content types
-	if err := u.addContentTypeOverride(chartIndex); err != nil {
-		return fmt.Errorf("add content type: %w", err)
-	}
-
-	return nil
-}
-
-// validateExtendedChartOptions validates extended chart options
-func validateExtendedChartOptions(opts ExtendedChartOptions) error {
-	if len(opts.Categories) == 0 {
-		return fmt.Errorf("categories cannot be empty")
-	}
-	if len(opts.Series) == 0 {
-		return fmt.Errorf("at least one series is required")
-	}
-
-	// Validate series
-	for i, series := range opts.Series {
-		if strings.TrimSpace(series.Name) == "" {
-			return fmt.Errorf("series[%d] name cannot be empty", i)
-		}
-		if len(series.Values) != len(opts.Categories) {
-			return fmt.Errorf("series[%d] values length (%d) must match categories length (%d)",
-				i, len(series.Values), len(opts.Categories))
-		}
-	}
-
-	// Validate axes if provided
-	if opts.CategoryAxis != nil {
-		if err := validateAxisOptions("CategoryAxis", opts.CategoryAxis); err != nil {
-			return err
-		}
-	}
-	if opts.ValueAxis != nil {
-		if err := validateAxisOptions("ValueAxis", opts.ValueAxis); err != nil {
-			return err
-		}
-	}
-
-	// Validate bar chart options if provided
-	if opts.BarChartOptions != nil {
-		if opts.BarChartOptions.GapWidth < 0 || opts.BarChartOptions.GapWidth > 500 {
-			return fmt.Errorf("BarChartOptions.GapWidth must be between 0 and 500")
-		}
-		if opts.BarChartOptions.Overlap < -100 || opts.BarChartOptions.Overlap > 100 {
-			return fmt.Errorf("BarChartOptions.Overlap must be between -100 and 100")
-		}
-	}
-
-	return nil
-}
-
-// validateAxisOptions validates axis options
-func validateAxisOptions(name string, axis *AxisOptions) error {
-	if axis.Min != nil && axis.Max != nil && *axis.Min >= *axis.Max {
-		return fmt.Errorf("%s: Min must be less than Max", name)
-	}
-	if axis.MajorUnit != nil && *axis.MajorUnit <= 0 {
-		return fmt.Errorf("%s: MajorUnit must be positive", name)
-	}
-	if axis.MinorUnit != nil && *axis.MinorUnit <= 0 {
-		return fmt.Errorf("%s: MinorUnit must be positive", name)
-	}
-	if axis.MajorUnit != nil && axis.MinorUnit != nil && *axis.MinorUnit >= *axis.MajorUnit {
-		return fmt.Errorf("%s: MinorUnit must be less than MajorUnit", name)
-	}
-	return nil
-}
-
-// applyExtendedChartDefaults applies default values to extended chart options
-func applyExtendedChartDefaults(opts ExtendedChartOptions) ExtendedChartOptions {
-	// Basic defaults
-	if opts.ChartKind == "" {
-		opts.ChartKind = ChartKindColumn
-	}
-	if opts.Width == 0 {
-		opts.Width = 6099523 // ~6.5 inches
-	}
-	if opts.Height == 0 {
-		opts.Height = 3340467 // ~3.5 inches
-	}
-
-	// Apply legend defaults
-	if opts.Legend == nil {
-		opts.Legend = &LegendOptions{
-			Show:     true,
-			Position: "r",
-			Overlay:  false,
-		}
-	}
-
-	// Apply category axis defaults
-	if opts.CategoryAxis == nil {
-		opts.CategoryAxis = &AxisOptions{}
-	}
-	opts.CategoryAxis = applyAxisDefaults(opts.CategoryAxis, true)
-
-	// Apply value axis defaults
-	if opts.ValueAxis == nil {
-		opts.ValueAxis = &AxisOptions{}
-	}
-	opts.ValueAxis = applyAxisDefaults(opts.ValueAxis, false)
-
-	// Apply chart properties defaults
-	if opts.Properties == nil {
-		opts.Properties = &ChartProperties{}
-	}
-	if opts.Properties.Style == 0 {
-		opts.Properties.Style = ChartStyle2
-	}
-	if opts.Properties.Language == "" {
-		opts.Properties.Language = "en-US"
-	}
-	if opts.Properties.DisplayBlanksAs == "" {
-		opts.Properties.DisplayBlanksAs = "gap"
-	}
-	opts.Properties.PlotVisibleOnly = true // Always true
-
-	// Apply bar chart defaults if chart is bar/column type
-	if opts.ChartKind == ChartKindColumn || opts.ChartKind == ChartKindBar {
-		if opts.BarChartOptions == nil {
-			opts.BarChartOptions = &BarChartOptions{}
-		}
-		if opts.BarChartOptions.Direction == "" {
-			if opts.ChartKind == ChartKindColumn {
-				opts.BarChartOptions.Direction = BarDirectionColumn
-			} else {
-				opts.BarChartOptions.Direction = BarDirectionBar
-			}
-		}
-		if opts.BarChartOptions.Grouping == "" {
-			opts.BarChartOptions.Grouping = BarGroupingClustered
-		}
-		if opts.BarChartOptions.GapWidth == 0 {
-			opts.BarChartOptions.GapWidth = 150
-		}
-	}
-
-	// Apply data label defaults if specified
-	if opts.DataLabels != nil {
-		if opts.DataLabels.Position == "" {
-			opts.DataLabels.Position = DataLabelBestFit
-		}
-	}
-
-	return opts
-}
-
 // applyAxisDefaults applies default values to axis options
 func applyAxisDefaults(axis *AxisOptions, isCategoryAxis bool) *AxisOptions {
 	if axis == nil {
@@ -884,131 +792,6 @@ func applyAxisDefaults(axis *AxisOptions, isCategoryAxis bool) *AxisOptions {
 	return axis
 }
 
-// convertToChartOptions converts ExtendedChartOptions to ChartOptions for workbook creation
-func convertToChartOptions(opts ExtendedChartOptions) ChartOptions {
-	// Convert SeriesOptions to SeriesData
-	series := make([]SeriesData, len(opts.Series))
-	for i, s := range opts.Series {
-		series[i] = SeriesData{
-			Name:   s.Name,
-			Values: s.Values,
-			Color:  s.Color,
-		}
-	}
-
-	return ChartOptions{
-		Position:   opts.Position,
-		Anchor:     opts.Anchor,
-		ChartKind:  opts.ChartKind,
-		Title:      opts.Title,
-		Categories: opts.Categories,
-		Series:     series,
-		ShowLegend: opts.Legend != nil && opts.Legend.Show,
-		LegendPosition: func() string {
-			if opts.Legend != nil {
-				return opts.Legend.Position
-			}
-			return "r"
-		}(),
-		Width:   opts.Width,
-		Height:  opts.Height,
-		Caption: opts.Caption,
-	}
-}
-
-// createExtendedChartXML generates the chart XML file with extended options
-func (u *Updater) createExtendedChartXML(chartPath string, opts ExtendedChartOptions) error {
-	if err := os.MkdirAll(filepath.Dir(chartPath), 0o755); err != nil {
-		return fmt.Errorf("create charts directory: %w", err)
-	}
-
-	xml := generateExtendedChartXML(opts)
-
-	if err := os.WriteFile(chartPath, xml, 0o644); err != nil {
-		return fmt.Errorf("write chart xml: %w", err)
-	}
-
-	return nil
-}
-
-// generateExtendedChartXML creates the chart XML content with all extended options
-func generateExtendedChartXML(opts ExtendedChartOptions) []byte {
-	var buf bytes.Buffer
-
-	// XML declaration with newline (Word requires this)
-	buf.WriteString(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`)
-	buf.WriteString("\n")
-
-	// chartSpace with all standard namespaces
-	buf.WriteString(`<c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"`)
-	buf.WriteString(` xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"`)
-	buf.WriteString(` xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"`)
-	buf.WriteString(` xmlns:c16r2="http://schemas.microsoft.com/office/drawing/2015/06/chart">`)
-
-	// Chart properties
-	buf.WriteString(fmt.Sprintf(`<c:date1904 val="%d"/>`, boolToInt(opts.Properties.Date1904)))
-	buf.WriteString(fmt.Sprintf(`<c:lang val="%s"/>`, opts.Properties.Language))
-	buf.WriteString(fmt.Sprintf(`<c:roundedCorners val="%d"/>`, boolToInt(opts.Properties.RoundedCorners)))
-
-	// Chart style (if not default)
-	if opts.Properties.Style > 0 {
-		buf.WriteString(fmt.Sprintf(`<c:style val="%d"/>`, opts.Properties.Style))
-	}
-
-	buf.WriteString(`<c:chart>`)
-
-	// Chart title
-	if opts.Title != "" {
-		buf.WriteString(generateTitleXML(opts.Title, opts.TitleOverlay))
-	}
-
-	buf.WriteString(`<c:autoTitleDeleted val="0"/>`)
-	buf.WriteString(`<c:plotArea>`)
-	buf.WriteString(`<c:layout/>`)
-
-	// Generate chart type specific content
-	switch opts.ChartKind {
-	case "barChart": // ChartKindColumn and ChartKindBar both use barChart
-		buf.WriteString(generateExtendedBarChartXML(opts))
-	case ChartKindLine:
-		buf.WriteString(generateExtendedLineChartXML(opts))
-	case ChartKindPie:
-		buf.WriteString(generateExtendedPieChartXML(opts))
-	case ChartKindArea:
-		buf.WriteString(generateExtendedAreaChartXML(opts))
-	default:
-		buf.WriteString(generateExtendedBarChartXML(opts)) // Default to bar/column
-	}
-
-	// Axes (category and value for most chart types, except pie)
-	if opts.ChartKind != ChartKindPie {
-		buf.WriteString(generateCategoryAxisXML(opts.CategoryAxis))
-		buf.WriteString(generateValueAxisXML(opts.ValueAxis))
-	}
-
-	buf.WriteString(`</c:plotArea>`)
-
-	// Legend
-	if opts.Legend.Show {
-		buf.WriteString(generateLegendXML(opts.Legend))
-	}
-
-	buf.WriteString(fmt.Sprintf(`<c:plotVisOnly val="%d"/>`, boolToInt(opts.Properties.PlotVisibleOnly)))
-	buf.WriteString(fmt.Sprintf(`<c:dispBlanksAs val="%s"/>`, opts.Properties.DisplayBlanksAs))
-	buf.WriteString(fmt.Sprintf(`<c:showDLblsOverMax val="%d"/>`, boolToInt(opts.Properties.ShowDataLabelsOverMax)))
-
-	buf.WriteString(`</c:chart>`)
-
-	// External data reference
-	buf.WriteString(`<c:externalData r:id="rId1">`)
-	buf.WriteString(`<c:autoUpdate val="0"/>`)
-	buf.WriteString(`</c:externalData>`)
-
-	buf.WriteString(`</c:chartSpace>`)
-
-	return buf.Bytes()
-}
-
 // generateTitleXML generates chart title XML
 func generateTitleXML(title string, overlay bool) string {
 	var buf bytes.Buffer
@@ -1042,117 +825,8 @@ func generateLegendXML(legend *LegendOptions) string {
 	return buf.String()
 }
 
-// generateExtendedBarChartXML generates bar/column chart XML with extended options
-func generateExtendedBarChartXML(opts ExtendedChartOptions) string {
-	var buf bytes.Buffer
-
-	buf.WriteString(`<c:barChart>`)
-	buf.WriteString(fmt.Sprintf(`<c:barDir val="%s"/>`, opts.BarChartOptions.Direction))
-	buf.WriteString(fmt.Sprintf(`<c:grouping val="%s"/>`, opts.BarChartOptions.Grouping))
-	buf.WriteString(fmt.Sprintf(`<c:varyColors val="%d"/>`, boolToInt(opts.BarChartOptions.VaryColors)))
-
-	// Series
-	for i, series := range opts.Series {
-		buf.WriteString(generateSeriesXML(i, series, opts))
-	}
-
-	// Data labels (chart-level default)
-	if opts.DataLabels != nil {
-		buf.WriteString(generateDataLabelsXML(opts.DataLabels))
-	} else {
-		buf.WriteString(`<c:dLbls><c:showLegendKey val="0"/><c:showVal val="0"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>`)
-	}
-
-	buf.WriteString(fmt.Sprintf(`<c:gapWidth val="%d"/>`, opts.BarChartOptions.GapWidth))
-	buf.WriteString(fmt.Sprintf(`<c:overlap val="%d"/>`, opts.BarChartOptions.Overlap))
-	buf.WriteString(`<c:axId val="2071991400"/>`)
-	buf.WriteString(`<c:axId val="2071991240"/>`)
-	buf.WriteString(`</c:barChart>`)
-
-	return buf.String()
-}
-
-// generateExtendedLineChartXML generates line chart XML with extended options
-func generateExtendedLineChartXML(opts ExtendedChartOptions) string {
-	var buf bytes.Buffer
-
-	buf.WriteString(`<c:lineChart>`)
-	buf.WriteString(`<c:grouping val="standard"/>`)
-	buf.WriteString(`<c:varyColors val="0"/>`)
-
-	// Series
-	for i, series := range opts.Series {
-		buf.WriteString(generateSeriesXML(i, series, opts))
-	}
-
-	// Data labels
-	if opts.DataLabels != nil {
-		buf.WriteString(generateDataLabelsXML(opts.DataLabels))
-	} else {
-		buf.WriteString(`<c:dLbls><c:showLegendKey val="0"/><c:showVal val="0"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>`)
-	}
-
-	buf.WriteString(`<c:axId val="2071991400"/>`)
-	buf.WriteString(`<c:axId val="2071991240"/>`)
-	buf.WriteString(`</c:lineChart>`)
-
-	return buf.String()
-}
-
-// generateExtendedPieChartXML generates pie chart XML with extended options
-func generateExtendedPieChartXML(opts ExtendedChartOptions) string {
-	var buf bytes.Buffer
-
-	buf.WriteString(`<c:pieChart>`)
-	buf.WriteString(`<c:varyColors val="1"/>`) // Pie charts typically vary colors
-
-	// Series (pie charts usually have one series)
-	for i, series := range opts.Series {
-		buf.WriteString(generateSeriesXML(i, series, opts))
-	}
-
-	// Data labels
-	if opts.DataLabels != nil {
-		buf.WriteString(generateDataLabelsXML(opts.DataLabels))
-	} else {
-		buf.WriteString(`<c:dLbls><c:showLegendKey val="0"/><c:showVal val="0"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="1"/><c:showBubbleSize val="0"/>`)
-		buf.WriteString(`<c:showLeaderLines val="1"/></c:dLbls>`)
-	}
-
-	buf.WriteString(`</c:pieChart>`)
-
-	return buf.String()
-}
-
-// generateExtendedAreaChartXML generates area chart XML with extended options
-func generateExtendedAreaChartXML(opts ExtendedChartOptions) string {
-	var buf bytes.Buffer
-
-	buf.WriteString(`<c:areaChart>`)
-	buf.WriteString(`<c:grouping val="standard"/>`)
-	buf.WriteString(`<c:varyColors val="0"/>`)
-
-	// Series
-	for i, series := range opts.Series {
-		buf.WriteString(generateSeriesXML(i, series, opts))
-	}
-
-	// Data labels
-	if opts.DataLabels != nil {
-		buf.WriteString(generateDataLabelsXML(opts.DataLabels))
-	} else {
-		buf.WriteString(`<c:dLbls><c:showLegendKey val="0"/><c:showVal val="0"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>`)
-	}
-
-	buf.WriteString(`<c:axId val="2071991400"/>`)
-	buf.WriteString(`<c:axId val="2071991240"/>`)
-	buf.WriteString(`</c:areaChart>`)
-
-	return buf.String()
-}
-
-// generateSeriesXML generates series XML with extended options
-func generateSeriesXML(index int, series SeriesOptions, opts ExtendedChartOptions) string {
+// generateSeriesXML generates series XML
+func generateSeriesXML(index int, series SeriesOptions, opts ChartOptions) string {
 	var buf bytes.Buffer
 
 	buf.WriteString(fmt.Sprintf(`<c:ser><c:idx val="%d"/><c:order val="%d"/>`, index, index))
@@ -1373,71 +1047,6 @@ func generateAxisTitleXML(title string, overlay bool) string {
 	buf.WriteString(fmt.Sprintf(`<c:overlay val="%d"/>`, boolToInt(overlay)))
 	buf.WriteString(`</c:title>`)
 	return buf.String()
-}
-
-// insertExtendedChartDrawing inserts the chart drawing into the document
-func (u *Updater) insertExtendedChartDrawing(chartIndex int, relId string, opts ExtendedChartOptions) error {
-	docPath := filepath.Join(u.tempDir, "word", "document.xml")
-	raw, err := os.ReadFile(docPath)
-	if err != nil {
-		return fmt.Errorf("read document.xml: %w", err)
-	}
-
-	drawing, err := u.generateChartDrawingWithSize(chartIndex, relId, opts.Width, opts.Height)
-	if err != nil {
-		return fmt.Errorf("generate chart drawing: %w", err)
-	}
-
-	// Add caption if specified
-	contentToInsert := drawing
-	if opts.Caption != nil {
-		// Validate caption options
-		if err := ValidateCaptionOptions(opts.Caption); err != nil {
-			return fmt.Errorf("invalid caption options: %w", err)
-		}
-
-		// Set caption type to Figure if not already set
-		if opts.Caption.Type == "" {
-			opts.Caption.Type = CaptionFigure
-		}
-
-		// Generate caption XML
-		captionXML := generateCaptionXML(*opts.Caption)
-
-		// Combine chart and caption based on position
-		contentToInsert = insertCaptionWithElement(captionXML, drawing, opts.Caption.Position)
-	}
-
-	// Insert based on position
-	var updated []byte
-	switch opts.Position {
-	case PositionBeginning:
-		updated, err = insertAtBodyStart(raw, contentToInsert)
-	case PositionEnd:
-		updated, err = insertAtBodyEnd(raw, contentToInsert)
-	case PositionAfterText:
-		if opts.Anchor == "" {
-			return fmt.Errorf("anchor text required for PositionAfterText")
-		}
-		updated, err = insertAfterText(raw, contentToInsert, opts.Anchor)
-	case PositionBeforeText:
-		if opts.Anchor == "" {
-			return fmt.Errorf("anchor text required for PositionBeforeText")
-		}
-		updated, err = insertBeforeText(raw, contentToInsert, opts.Anchor)
-	default:
-		return fmt.Errorf("invalid insert position")
-	}
-
-	if err != nil {
-		return fmt.Errorf("insert chart: %w", err)
-	}
-
-	if err := os.WriteFile(docPath, updated, 0o644); err != nil {
-		return fmt.Errorf("write document.xml: %w", err)
-	}
-
-	return nil
 }
 
 // boolToInt converts boolean to integer (0 or 1)

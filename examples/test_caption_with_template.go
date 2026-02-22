@@ -56,7 +56,7 @@ func main() {
 		Position:   updater.PositionEnd,
 		Title:      "Quarterly Revenue",
 		Categories: []string{"Q1", "Q2", "Q3", "Q4"},
-		Series: []updater.SeriesData{
+		Series: []updater.SeriesOptions{
 			{Name: "2025", Values: []float64{100, 120, 110, 130}},
 			{Name: "2026", Values: []float64{110, 130, 125, 145}},
 		},

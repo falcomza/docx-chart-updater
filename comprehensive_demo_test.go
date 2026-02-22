@@ -38,7 +38,7 @@ func testChartUpdateDemo(t *testing.T) {
 		CategoryAxisTitle: "Fiscal Quarter",
 		ValueAxisTitle:    "Amount (USD)",
 		Categories:        []string{"Q1 2024", "Q2 2024", "Q3 2024", "Q4 2024"},
-		Series: []SeriesData{
+		Series: []SeriesOptions{
 			{Name: "Revenue", Values: []float64{125000, 145000, 132000, 168000}},
 			{Name: "Expenses", Values: []float64{85000, 95000, 88000, 102000}},
 			{Name: "Profit", Values: []float64{40000, 50000, 44000, 66000}},
@@ -149,7 +149,7 @@ func testInsertChartDemo(t *testing.T) {
 		CategoryAxisTitle: "Month",
 		ValueAxisTitle:    "Sales (Units)",
 		Categories:        []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun"},
-		Series: []SeriesData{
+		Series: []SeriesOptions{
 			{Name: "Product A", Values: []float64{120, 135, 150, 145, 160, 175}},
 			{Name: "Product B", Values: []float64{80, 85, 95, 100, 105, 110}},
 		},
@@ -239,7 +239,7 @@ func testCompleteWorkflowDemo(t *testing.T) {
 		ChartKind:  ChartKindLine,
 		Title:      "Customer Acquisition Trend",
 		Categories: []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun"},
-		Series: []SeriesData{
+		Series: []SeriesOptions{
 			{Name: "New Customers", Values: []float64{45, 52, 58, 64, 70, 78}},
 		},
 		ShowLegend: true,

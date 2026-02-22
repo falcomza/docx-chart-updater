@@ -28,7 +28,7 @@ func TestWordCompatibility_XMLFormatting(t *testing.T) {
 		CategoryAxisTitle: "Categories",
 		ValueAxisTitle:    "Values",
 		Categories:        []string{"A", "B", "C"},
-		Series: []SeriesData{
+		Series: []SeriesOptions{
 			{Name: "Series 1", Values: []float64{10, 20, 30}},
 			{Name: "Series 2", Values: []float64{15, 25, 35}},
 		},

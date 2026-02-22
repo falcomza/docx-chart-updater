@@ -30,7 +30,7 @@ func TestInsertBasicChart(t *testing.T) {
 		Position:   godocx.PositionEnd,
 		Title:      "Sales Report",
 		Categories: []string{"Q1", "Q2", "Q3", "Q4"},
-		Series: []godocx.SeriesData{
+		Series: []godocx.SeriesOptions{
 			{Name: "Revenue", Values: []float64{100, 150, 120, 180}},
 			{Name: "Profit", Values: []float64{20, 30, 25, 40}},
 		},
@@ -116,7 +116,7 @@ func TestInsertChartWithAxisTitles(t *testing.T) {
 		CategoryAxisTitle: "Time Period",
 		ValueAxisTitle:    "Value (USD)",
 		Categories:        []string{"Jan", "Feb", "Mar"},
-		Series: []godocx.SeriesData{
+		Series: []godocx.SeriesOptions{
 			{Name: "Sales", Values: []float64{1000, 1200, 1500}},
 		},
 		ShowLegend: true,
@@ -158,7 +158,7 @@ func TestInsertMultipleCharts(t *testing.T) {
 		Position:   godocx.PositionEnd,
 		Title:      "Chart 1",
 		Categories: []string{"A", "B"},
-		Series: []godocx.SeriesData{
+		Series: []godocx.SeriesOptions{
 			{Name: "Series1", Values: []float64{10, 20}},
 		},
 		ShowLegend: true,
@@ -172,7 +172,7 @@ func TestInsertMultipleCharts(t *testing.T) {
 		Position:   godocx.PositionEnd,
 		Title:      "Chart 2",
 		Categories: []string{"X", "Y"},
-		Series: []godocx.SeriesData{
+		Series: []godocx.SeriesOptions{
 			{Name: "Series2", Values: []float64{30, 40}},
 		},
 		ShowLegend: true,
@@ -215,7 +215,7 @@ func TestInsertChartInvalidData(t *testing.T) {
 	err = u.InsertChart(godocx.ChartOptions{
 		Position:   godocx.PositionEnd,
 		Categories: []string{},
-		Series: []godocx.SeriesData{
+		Series: []godocx.SeriesOptions{
 			{Name: "Test", Values: []float64{}},
 		},
 	})
@@ -227,7 +227,7 @@ func TestInsertChartInvalidData(t *testing.T) {
 	err = u.InsertChart(godocx.ChartOptions{
 		Position:   godocx.PositionEnd,
 		Categories: []string{"A", "B"},
-		Series:     []godocx.SeriesData{},
+		Series:     []godocx.SeriesOptions{},
 	})
 	if err == nil {
 		t.Error("Expected error for empty series")
@@ -237,7 +237,7 @@ func TestInsertChartInvalidData(t *testing.T) {
 	err = u.InsertChart(godocx.ChartOptions{
 		Position:   godocx.PositionEnd,
 		Categories: []string{"A", "B", "C"},
-		Series: []godocx.SeriesData{
+		Series: []godocx.SeriesOptions{
 			{Name: "Test", Values: []float64{1, 2}}, // Only 2 values, but 3 categories
 		},
 	})
@@ -267,7 +267,7 @@ func TestInsertChartMultipleSeries(t *testing.T) {
 		CategoryAxisTitle: "Month",
 		ValueAxisTitle:    "Amount",
 		Categories:        []string{"Jan", "Feb", "Mar", "Apr"},
-		Series: []godocx.SeriesData{
+		Series: []godocx.SeriesOptions{
 			{Name: "Revenue", Values: []float64{1000, 1200, 1100, 1300}},
 			{Name: "Costs", Values: []float64{600, 700, 650, 750}},
 			{Name: "Profit", Values: []float64{400, 500, 450, 550}},
@@ -313,7 +313,7 @@ func TestInsertChartNoLegend(t *testing.T) {
 		Position:   godocx.PositionEnd,
 		Title:      "Chart Without Legend",
 		Categories: []string{"A", "B"},
-		Series: []godocx.SeriesData{
+		Series: []godocx.SeriesOptions{
 			{Name: "Data", Values: []float64{10, 20}},
 		},
 		ShowLegend: false,
@@ -358,7 +358,7 @@ func TestInsertChartAtBeginning(t *testing.T) {
 		Position:   godocx.PositionBeginning,
 		Title:      "First Chart",
 		Categories: []string{"A", "B"},
-		Series: []godocx.SeriesData{
+		Series: []godocx.SeriesOptions{
 			{Name: "Data", Values: []float64{5, 10}},
 		},
 		ShowLegend: true,

@@ -21,7 +21,7 @@ func main() {
 		Position:   godocx.PositionEnd,
 		Title:      "Quarterly Sales Report 2024",
 		Categories: []string{"Q1", "Q2", "Q3", "Q4"},
-		Series: []godocx.SeriesData{
+		Series: []godocx.SeriesOptions{
 			{Name: "Revenue", Values: []float64{250000, 280000, 310000, 290000}},
 			{Name: "Profit", Values: []float64{50000, 62000, 68000, 64000}},
 		},
@@ -44,7 +44,7 @@ func main() {
 		CategoryAxisTitle: "Month",
 		ValueAxisTitle:    "Visitors (thousands)",
 		Categories:        []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun"},
-		Series: []godocx.SeriesData{
+		Series: []godocx.SeriesOptions{
 			{Name: "Unique Visitors", Values: []float64{45, 52, 58, 61, 65, 70}},
 			{Name: "Page Views", Values: []float64{180, 220, 240, 255, 275, 295}},
 		},
@@ -127,7 +127,7 @@ func main() {
 		Position:   godocx.PositionEnd,
 		Title:      "Annual Growth Rate",
 		Categories: []string{"2020", "2021", "2022", "2023", "2024"},
-		Series: []godocx.SeriesData{
+		Series: []godocx.SeriesOptions{
 			{Name: "Growth %", Values: []float64{5.2, 6.8, 7.1, 6.5, 8.3}},
 		},
 		ShowLegend: false,
@@ -142,7 +142,7 @@ func main() {
 		Position:   godocx.PositionEnd,
 		Title:      "Market Share Distribution",
 		Categories: []string{"Company A", "Company B", "Company C", "Others"},
-		Series: []godocx.SeriesData{
+		Series: []godocx.SeriesOptions{
 			{Name: "Market Share", Values: []float64{35, 28, 22, 15}},
 		},
 		ShowLegend: false,

@@ -25,7 +25,7 @@ func main() {
 		CategoryAxisTitle: "Categories",
 		ValueAxisTitle:    "Values",
 		Categories:        []string{"Q1", "Q2", "Q3", "Q4"},
-		Series: []docx.SeriesData{
+		Series: []docx.SeriesOptions{
 			{Name: "Revenue", Values: []float64{100, 150, 120, 180}},
 			{Name: "Expenses", Values: []float64{70, 85, 75, 95}},
 		},

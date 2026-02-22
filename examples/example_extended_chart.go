@@ -37,7 +37,7 @@ func createMinimalChart() {
 	}
 	defer updater.Save("outputs/chart_minimal.docx")
 
-	err = updater.InsertChartExtended(godocx.ExtendedChartOptions{
+	err = updater.InsertChart(godocx.ChartOptions{
 		Categories: []string{"A", "B", "C"},
 		Series: []godocx.SeriesOptions{
 			{
@@ -65,7 +65,7 @@ func createCustomAxisChart() {
 	minValue := 0.0
 	maxValue := 100.0
 
-	err = updater.InsertChartExtended(godocx.ExtendedChartOptions{
+	err = updater.InsertChart(godocx.ChartOptions{
 		Title:      "Monthly Performance",
 		ChartKind:  godocx.ChartKindColumn,
 		Categories: []string{"Jan", "Feb", "Mar", "Apr"},
@@ -110,7 +110,7 @@ func createDataLabelsChart() {
 	}
 	defer updater.Save("outputs/chart_data_labels.docx")
 
-	err = updater.InsertChartExtended(godocx.ExtendedChartOptions{
+	err = updater.InsertChart(godocx.ChartOptions{
 		Title:      "Product Sales",
 		ChartKind:  godocx.ChartKindBar,
 		Categories: []string{"Product A", "Product B", "Product C", "Product D"},
@@ -152,7 +152,7 @@ func createFullyCustomizedChart() {
 	maxVal := 50.0
 	majorUnit := 10.0
 
-	err = updater.InsertChartExtended(godocx.ExtendedChartOptions{
+	err = updater.InsertChart(godocx.ChartOptions{
 		Title:        "Comprehensive Analysis",
 		TitleOverlay: false,
 		ChartKind:    godocx.ChartKindLine,
@@ -219,7 +219,7 @@ func createFinancialChart() {
 	}
 	defer updater.Save("outputs/chart_financial.docx")
 
-	err = updater.InsertChartExtended(godocx.ExtendedChartOptions{
+	err = updater.InsertChart(godocx.ChartOptions{
 		Title:      "Quarterly Revenue",
 		ChartKind:  godocx.ChartKindColumn,
 		Categories: []string{"Q1", "Q2", "Q3", "Q4"},
@@ -272,7 +272,7 @@ func createScientificChart() {
 	majorUnit := 20.0
 	minorUnit := 5.0
 
-	err = updater.InsertChartExtended(godocx.ExtendedChartOptions{
+	err = updater.InsertChart(godocx.ChartOptions{
 		Title:      "Temperature Over Time",
 		ChartKind:  godocx.ChartKindLine,
 		Categories: []string{"0h", "6h", "12h", "18h", "24h"},

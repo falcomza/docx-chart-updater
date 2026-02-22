@@ -29,7 +29,7 @@ func TestUpdateDropsExtraSeries(t *testing.T) {
 		Position:   godocx.PositionEnd,
 		ChartKind:  godocx.ChartKindColumn,
 		Categories: []string{"A", "B", "C"},
-		Series: []godocx.SeriesData{
+		Series: []godocx.SeriesOptions{
 			{Name: "First", Values: []float64{10, 20, 30}},
 			{Name: "Second", Values: []float64{40, 50, 60}},
 		},

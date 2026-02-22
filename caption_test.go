@@ -29,7 +29,7 @@ func TestChartWithCaption(t *testing.T) {
 		Position:   godocx.PositionEnd,
 		Title:      "Test Chart",
 		Categories: []string{"A", "B", "C"},
-		Series: []godocx.SeriesData{
+		Series: []godocx.SeriesOptions{
 			{Name: "Series 1", Values: []float64{10, 20, 30}},
 		},
 		Caption: &godocx.CaptionOptions{
@@ -81,7 +81,7 @@ func TestChartWithCaptionBefore(t *testing.T) {
 		Position:   godocx.PositionEnd,
 		Title:      "Test Chart Before",
 		Categories: []string{"X", "Y", "Z"},
-		Series: []godocx.SeriesData{
+		Series: []godocx.SeriesOptions{
 			{Name: "Data", Values: []float64{5, 15, 25}},
 		},
 		Caption: &godocx.CaptionOptions{
@@ -228,7 +228,7 @@ func TestCaptionWithManualNumbering(t *testing.T) {
 		Position:   godocx.PositionEnd,
 		Title:      "Manual Number Chart",
 		Categories: []string{"Q1", "Q2"},
-		Series: []godocx.SeriesData{
+		Series: []godocx.SeriesOptions{
 			{Name: "Values", Values: []float64{100, 200}},
 		},
 		Caption: &godocx.CaptionOptions{
@@ -467,7 +467,7 @@ func TestMultipleChartsCaptionsAutoNumbering(t *testing.T) {
 			Position:   godocx.PositionEnd,
 			Title:      "Chart " + string(rune('A'+i-1)),
 			Categories: []string{"X", "Y"},
-			Series: []godocx.SeriesData{
+			Series: []godocx.SeriesOptions{
 				{Name: "Data", Values: []float64{float64(i * 10), float64(i * 20)}},
 			},
 			Caption: &godocx.CaptionOptions{
