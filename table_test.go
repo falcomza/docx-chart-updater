@@ -1,6 +1,7 @@
 package godocx_test
 
 import (
+	"archive/zip"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -868,5 +869,117 @@ func TestInsertTableConditionalWithRowStyle(t *testing.T) {
 	// Verify default gray background is also present (for non-matching cells)
 	if !strings.Contains(docXML, `w:fill="E7E6E6"`) {
 		t.Error("Default gray background not found for non-matching cells")
+	}
+}
+
+func buildFixtureDocxForTableUpdate(t *testing.T) *godocx.Updater {
+	t.Helper()
+	// Write a minimal DOCX to a temp file
+	path := filepath.Join(t.TempDir(), "fixture.docx")
+	if err := writeMinimalDocx(path); err != nil {
+		t.Fatalf("writeMinimalDocx: %v", err)
+	}
+	u, err := godocx.New(path)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	// Insert a table with header row + 2 data rows
+	err = u.InsertTable(godocx.TableOptions{
+		Columns:  []godocx.ColumnDefinition{{Title: "Name"}, {Title: "Value"}},
+		Rows:     [][]string{{"Alpha", "100"}, {"Beta", "200"}},
+		Position: godocx.PositionEnd,
+	})
+	if err != nil {
+		t.Fatalf("InsertTable: %v", err)
+	}
+	return u
+}
+
+func writeMinimalDocx(path string) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	w := zip.NewWriter(f)
+	entries := map[string]string{
+		"[Content_Types].xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"></Types>`,
+		"word/document.xml":   `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body></w:body></w:document>`,
+		"word/_rels/document.xml.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`,
+		"_rels/.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`,
+	}
+	for name, content := range entries {
+		e, err := w.Create(name)
+		if err != nil {
+			return err
+		}
+		if _, err := e.Write([]byte(content)); err != nil {
+			return err
+		}
+	}
+	return w.Close()
+}
+
+func TestUpdateTableCell(t *testing.T) {
+	u := buildFixtureDocxForTableUpdate(t)
+	defer u.Cleanup()
+
+	// Update row 2, col 2 (1-based, row 1 is header)
+	if err := u.UpdateTableCell(1, 2, 2, "999"); err != nil {
+		t.Fatalf("UpdateTableCell: %v", err)
+	}
+
+	tables, err := u.GetTableText()
+	if err != nil {
+		t.Fatalf("GetTableText: %v", err)
+	}
+	// tables[0] is first table; row index 1 is second row; col index 1 is second col
+	got := tables[0][1][1]
+	if got != "999" {
+		t.Errorf("expected '999', got %q", got)
+	}
+}
+
+func TestUpdateTableCellSpecialChars(t *testing.T) {
+	u := buildFixtureDocxForTableUpdate(t)
+	defer u.Cleanup()
+
+	if err := u.UpdateTableCell(1, 1, 1, "A & B < C > D"); err != nil {
+		t.Fatalf("UpdateTableCell: %v", err)
+	}
+
+	tables, err := u.GetTableText()
+	if err != nil {
+		t.Fatalf("GetTableText: %v", err)
+	}
+	got := tables[0][0][0]
+	if got != "A & B < C > D" {
+		t.Errorf("expected 'A & B < C > D', got %q", got)
+	}
+}
+
+func TestUpdateTableCellValidation(t *testing.T) {
+	u := buildFixtureDocxForTableUpdate(t)
+	defer u.Cleanup()
+
+	tests := []struct {
+		tableIndex, row, col int
+		wantErr              bool
+	}{
+		{0, 1, 1, true},  // tableIndex < 1
+		{1, 0, 1, true},  // row < 1
+		{1, 1, 0, true},  // col < 1
+		{99, 1, 1, true}, // table doesn't exist
+		{1, 99, 1, true}, // row doesn't exist
+		{1, 1, 99, true}, // col doesn't exist
+		{1, 1, 1, false}, // valid
+	}
+	for _, tt := range tests {
+		err := u.UpdateTableCell(tt.tableIndex, tt.row, tt.col, "x")
+		if (err != nil) != tt.wantErr {
+			t.Errorf("UpdateTableCell(%d,%d,%d): got err=%v, wantErr=%v",
+				tt.tableIndex, tt.row, tt.col, err, tt.wantErr)
+		}
 	}
 }

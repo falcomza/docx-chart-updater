@@ -189,8 +189,9 @@ func (u *Updater) FindText(pattern string, opts FindOptions) ([]TextMatch, error
 func (u *Updater) extractTextFromXML(raw []byte) string {
 	var result strings.Builder
 
-	// Extract text from <w:t> elements
-	textPattern := regexp.MustCompile(`<w:t[^>]*>(.*?)</w:t>`)
+	// Extract text from <w:t> elements only (not <w:tc>, <w:tr>, etc.)
+	// The pattern matches <w:t> or <w:t followed by a space/attribute, but not <w:tc>, <w:tr>, etc.
+	textPattern := regexp.MustCompile(`<w:t(?:[ \t][^>]*)?>([^<]*)</w:t>`)
 	matches := textPattern.FindAllSubmatch(raw, -1)
 
 	for _, match := range matches {
@@ -208,8 +209,8 @@ func (u *Updater) extractTextFromXML(raw []byte) string {
 func (u *Updater) extractParagraphsFromXML(raw []byte) []string {
 	var paragraphs []string
 
-	// Find all <w:p> elements
-	paraPattern := regexp.MustCompile(`<w:p[^>]*>.*?</w:p>`)
+	// Find all <w:p> elements ((?s) allows . to match newlines)
+	paraPattern := regexp.MustCompile(`(?s)<w:p[^>]*>.*?</w:p>`)
 	paraMatches := paraPattern.FindAll(raw, -1)
 
 	for _, paraByte := range paraMatches {
@@ -227,8 +228,8 @@ func (u *Updater) extractParagraphsFromXML(raw []byte) []string {
 func (u *Updater) extractTablesFromXML(raw []byte) [][][]string {
 	var tables [][][]string
 
-	// Find all <w:tbl> elements
-	tablePattern := regexp.MustCompile(`<w:tbl>.*?</w:tbl>`)
+	// Find all <w:tbl> elements ((?s) allows . to match newlines)
+	tablePattern := regexp.MustCompile(`(?s)<w:tbl>.*?</w:tbl>`)
 	tableMatches := tablePattern.FindAll(raw, -1)
 
 	for _, tableBytes := range tableMatches {
@@ -245,15 +246,15 @@ func (u *Updater) extractTablesFromXML(raw []byte) [][][]string {
 func (u *Updater) extractTableData(tableXML []byte) [][]string {
 	var rows [][]string
 
-	// Find all <w:tr> (table row) elements
-	rowPattern := regexp.MustCompile(`<w:tr[^>]*>.*?</w:tr>`)
+	// Find all <w:tr> (table row) elements ((?s) allows . to match newlines)
+	rowPattern := regexp.MustCompile(`(?s)<w:tr[^>]*>.*?</w:tr>`)
 	rowMatches := rowPattern.FindAll(tableXML, -1)
 
 	for _, rowBytes := range rowMatches {
 		var cells []string
 
-		// Find all <w:tc> (table cell) elements
-		cellPattern := regexp.MustCompile(`<w:tc>.*?</w:tc>`)
+		// Find all <w:tc> (table cell) elements ((?s) allows . to match newlines)
+		cellPattern := regexp.MustCompile(`(?s)<w:tc>.*?</w:tc>`)
 		cellMatches := cellPattern.FindAll(rowBytes, -1)
 
 		for _, cellBytes := range cellMatches {
