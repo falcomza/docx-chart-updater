@@ -451,12 +451,15 @@ func TestGetChartCountEmpty(t *testing.T) {
 }
 
 func TestGetChartCountWithTemplate(t *testing.T) {
-	templatePath := filepath.Join("templates", "docx_template.docx")
-	if _, err := os.Stat(templatePath); os.IsNotExist(err) {
-		t.Skip("Template file not found")
+	// Uses a programmatic fixture that always has exactly 1 chart.
+	// The template file is not relied upon because its chart content is not guaranteed.
+	tempDir := t.TempDir()
+	inputPath := filepath.Join(tempDir, "input.docx")
+	if err := os.WriteFile(inputPath, buildFixtureDocx(t), 0o644); err != nil {
+		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := godocx.New(templatePath)
+	u, err := godocx.New(inputPath)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -524,24 +527,18 @@ const chart2FixtureXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?
 </c:chartSpace>`
 
 func TestGetChartData(t *testing.T) {
-	templatePath := filepath.Join("templates", "docx_template.docx")
-	if _, err := os.Stat(templatePath); os.IsNotExist(err) {
-		t.Skip("Template file not found")
+	// Uses a programmatic fixture that always has a chart with known categories and series.
+	tempDir := t.TempDir()
+	inputPath := filepath.Join(tempDir, "input.docx")
+	if err := os.WriteFile(inputPath, buildFixtureDocx(t), 0o644); err != nil {
+		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := godocx.New(templatePath)
+	u, err := godocx.New(inputPath)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
 	defer u.Cleanup()
-
-	count, err := u.GetChartCount()
-	if err != nil {
-		t.Fatalf("GetChartCount: %v", err)
-	}
-	if count == 0 {
-		t.Skip("Template has no charts")
-	}
 
 	data, err := u.GetChartData(1)
 	if err != nil {
@@ -564,12 +561,14 @@ func TestGetChartData(t *testing.T) {
 }
 
 func TestGetChartDataInvalidIndex(t *testing.T) {
-	templatePath := filepath.Join("templates", "docx_template.docx")
-	if _, err := os.Stat(templatePath); os.IsNotExist(err) {
-		t.Skip("Template file not found")
+	// Uses a programmatic fixture rather than the template file.
+	tempDir := t.TempDir()
+	inputPath := filepath.Join(tempDir, "input.docx")
+	if err := os.WriteFile(inputPath, buildFixtureDocx(t), 0o644); err != nil {
+		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := godocx.New(templatePath)
+	u, err := godocx.New(inputPath)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -586,13 +585,15 @@ func TestGetChartDataInvalidIndex(t *testing.T) {
 }
 
 func TestGetChartDataRoundTrip(t *testing.T) {
-	// InsertChart then GetChartData should return the same categories and series names
-	templatePath := filepath.Join("templates", "docx_template.docx")
-	if _, err := os.Stat(templatePath); os.IsNotExist(err) {
-		t.Skip("Template file not found")
+	// InsertChart then GetChartData should return the same categories and series names.
+	// Uses a programmatic fixture so the test is self-contained.
+	tempDir := t.TempDir()
+	inputPath := filepath.Join(tempDir, "input.docx")
+	if err := os.WriteFile(inputPath, buildFixtureDocx(t), 0o644); err != nil {
+		t.Fatalf("write input fixture: %v", err)
 	}
 
-	u, err := godocx.New(templatePath)
+	u, err := godocx.New(inputPath)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
