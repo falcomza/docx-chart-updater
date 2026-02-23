@@ -134,7 +134,7 @@ func (u *Updater) SetHeader(content HeaderFooterContent, opts HeaderOptions) err
 	}
 
 	// Update document.xml to reference header
-	if err := u.updateDocumentForHeaderFooter(opts.Type, "header", relID, opts.DifferentFirst, opts.DifferentOddEven); err != nil {
+	if err := u.updateDocumentForHeaderFooter(string(opts.Type), "header", relID, opts.DifferentFirst, opts.DifferentOddEven); err != nil {
 		return NewHeaderFooterError("failed to update document", err)
 	}
 
@@ -181,8 +181,8 @@ func (u *Updater) SetFooter(content HeaderFooterContent, opts FooterOptions) err
 		return NewHeaderFooterError("failed to add footer relationship", err)
 	}
 
-	// Update document.xml to reference footer
-	if err := u.updateDocumentForHeaderFooter(opts.Type, "footer", relID, opts.DifferentFirst, opts.DifferentOddEven); err != nil {
+	// Update document.xml to reference footer - use string type for flexibility
+	if err := u.updateDocumentForHeaderFooter(string(opts.Type), "footer", relID, opts.DifferentFirst, opts.DifferentOddEven); err != nil {
 		return NewHeaderFooterError("failed to update document", err)
 	}
 
@@ -402,7 +402,7 @@ func (u *Updater) addHeaderFooterRelationship(filename, hdrFtrType string) (stri
 }
 
 // updateDocumentForHeaderFooter updates document.xml to reference header/footer
-func (u *Updater) updateDocumentForHeaderFooter(hdrFtrType any, hdrFtr string, relID string, differentFirst, differentOddEven bool) error {
+func (u *Updater) updateDocumentForHeaderFooter(hdrFtrType string, hdrFtr string, relID string, differentFirst, differentOddEven bool) error {
 	docPath := filepath.Join(u.tempDir, "word", "document.xml")
 
 	raw, err := os.ReadFile(docPath)
@@ -436,12 +436,12 @@ func (u *Updater) updateDocumentForHeaderFooter(hdrFtrType any, hdrFtr string, r
 }
 
 // addHeaderFooterToSectPr adds header/footer reference to existing sectPr
-func (u *Updater) addHeaderFooterToSectPr(sectPr string, hdrFtrType any, hdrFtr string, relID string, differentFirst, differentOddEven bool) string {
+func (u *Updater) addHeaderFooterToSectPr(sectPr string, hdrFtrType string, hdrFtr string, relID string, differentFirst, differentOddEven bool) string {
 	// Determine reference type
 	refType := "default"
-	if hdrFtrType == HeaderFirst || hdrFtrType == FooterFirst {
+	if hdrFtrType == "first" {
 		refType = "first"
-	} else if hdrFtrType == HeaderEven || hdrFtrType == FooterEven {
+	} else if hdrFtrType == "even" {
 		refType = "even"
 	}
 
@@ -473,7 +473,7 @@ func (u *Updater) addHeaderFooterToSectPr(sectPr string, hdrFtrType any, hdrFtr 
 }
 
 // createSectPrWithHeaderFooter creates a new sectPr with header/footer
-func (u *Updater) createSectPrWithHeaderFooter(hdrFtrType any, hdrFtr string, relID string, differentFirst, differentOddEven bool) string {
+func (u *Updater) createSectPrWithHeaderFooter(hdrFtrType string, hdrFtr string, relID string, differentFirst, differentOddEven bool) string {
 	var buf strings.Builder
 
 	buf.WriteString("<w:sectPr>")
@@ -487,9 +487,9 @@ func (u *Updater) createSectPrWithHeaderFooter(hdrFtrType any, hdrFtr string, re
 
 	// Determine reference type
 	refType := "default"
-	if hdrFtrType == HeaderFirst || hdrFtrType == FooterFirst {
+	if hdrFtrType == "first" {
 		refType = "first"
-	} else if hdrFtrType == HeaderEven || hdrFtrType == FooterEven {
+	} else if hdrFtrType == "even" {
 		refType = "even"
 	}
 

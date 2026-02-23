@@ -14,11 +14,12 @@ import (
 type ChartKind string
 
 const (
-	ChartKindColumn ChartKind = "barChart"  // Column chart (vertical bars)
-	ChartKindBar    ChartKind = "barChart"  // Bar chart (horizontal bars)
-	ChartKindLine   ChartKind = "lineChart" // Line chart
-	ChartKindPie    ChartKind = "pieChart"  // Pie chart
-	ChartKindArea   ChartKind = "areaChart" // Area chart
+	ChartKindColumn  ChartKind = "barChart"    // Column chart (vertical bars)
+	ChartKindBar    ChartKind = "barChart"    // Bar chart (horizontal bars)
+	ChartKindLine   ChartKind = "lineChart"   // Line chart
+	ChartKindPie    ChartKind = "pieChart"    // Pie chart
+	ChartKindArea   ChartKind = "areaChart"   // Area chart
+	ChartKindScatter ChartKind = "scatterChart" // Scatter chart (XY chart)
 )
 
 // ChartOptions defines comprehensive options for chart creation
@@ -64,6 +65,9 @@ type ChartOptions struct {
 
 	// Bar/column-specific options (nil = clustered column defaults)
 	BarChartOptions *BarChartOptions
+
+	// Scatter chart-specific options (nil = marker defaults)
+	ScatterChartOptions *ScatterChartOptions
 }
 
 // InsertChart creates a new chart and inserts it into the document
@@ -330,6 +334,8 @@ func generateChartXML(opts ChartOptions) []byte {
 		buf.WriteString(generatePieChartXML(opts))
 	case ChartKindArea:
 		buf.WriteString(generateAreaChartXML(opts))
+	case ChartKindScatter:
+		buf.WriteString(generateScatterChartXML(opts))
 	default:
 		buf.WriteString(generateBarChartXML(opts)) // Default to bar/column
 	}
@@ -472,6 +478,139 @@ func generateAreaChartXML(opts ChartOptions) string {
 	return buf.String()
 }
 
+// ScatterChartOptions defines options specific to scatter charts
+type ScatterChartOptions struct {
+	// ScatterStyle defines the scatter chart style
+	// "line" - scatter chart with straight lines
+	// "lineMarker" - scatter chart with markers and straight lines
+	// "marker" - scatter chart with markers only (default)
+	// "smooth" - scatter chart with smooth lines
+	// "smoothMarker" - scatter chart with markers and smooth lines
+	ScatterStyle string
+
+	// VaryColors - whether to vary colors by point
+	VaryColors bool
+}
+
+// generateScatterChartXML generates scatter chart XML with extended options
+func generateScatterChartXML(opts ChartOptions) string {
+	var buf bytes.Buffer
+
+	buf.WriteString(`<c:scatterChart>`)
+
+	// Scatter style - default to markers only
+	scatterStyle := "marker"
+	if scOpts := opts.ScatterChartOptions; scOpts != nil {
+		if scOpts.ScatterStyle != "" {
+			scatterStyle = scOpts.ScatterStyle
+		}
+	}
+	buf.WriteString(fmt.Sprintf(`<c:scatterStyle val="%s"/>`, scatterStyle))
+
+	varyColors := false
+	if scOpts := opts.ScatterChartOptions; scOpts != nil {
+		varyColors = scOpts.VaryColors
+	}
+	buf.WriteString(fmt.Sprintf(`<c:varyColors val="%d"/>`, boolToInt(varyColors)))
+
+	// Series - scatter charts use different X values (not categories)
+	for i, series := range opts.Series {
+		buf.WriteString(generateScatterSeriesXML(i, series, opts))
+	}
+
+	// Data labels
+	if opts.DataLabels != nil {
+		buf.WriteString(generateDataLabelsXML(opts.DataLabels))
+	} else {
+		buf.WriteString(`<c:dLbls><c:showLegendKey val="0"/><c:showVal val="0"/><c:showCatName val="0"/><c:showSerName val="0"/><c:showPercent val="0"/><c:showBubbleSize val="0"/></c:dLbls>`)
+	}
+
+	buf.WriteString(`<c:axId val="2071991400"/>`)
+	buf.WriteString(`<c:axId val="2071991240"/>`)
+	buf.WriteString(`</c:scatterChart>`)
+
+	return buf.String()
+}
+
+// generateScatterSeriesXML generates series XML for scatter charts
+// Scatter charts use X values instead of categories
+func generateScatterSeriesXML(index int, series SeriesOptions, opts ChartOptions) string {
+	var buf bytes.Buffer
+
+	buf.WriteString(fmt.Sprintf(`<c:ser><c:idx val="%d"/><c:order val="%d"/>`, index, index))
+
+	// Series name
+	buf.WriteString(fmt.Sprintf(`<c:tx><c:strRef><c:f>Sheet1!$%s$1</c:f>`, columnLetter(index+2)))
+	buf.WriteString(fmt.Sprintf(`<c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>%s</c:v></c:pt></c:strCache></c:strRef></c:tx>`,
+		xmlEscape(series.Name)))
+
+	// Shape properties (color)
+	if series.Color != "" {
+		buf.WriteString(`<c:spPr>`)
+		color := normalizeHexColor(series.Color)
+		buf.WriteString(fmt.Sprintf(`<a:solidFill><a:srgbClr val="%s"/></a:solidFill>`, color))
+		buf.WriteString(`</c:spPr>`)
+	}
+
+	// X values (instead of categories) - use XValues if provided, otherwise use category indices
+	// Column offset: +2 for series data (B,C,D... when no XValues, C,D,E... when XValues exist)
+	colOffset := 2
+	colLetter := columnLetter(index + colOffset)
+
+	xValColLetter := columnLetter(2) // Column B for X values
+	if len(series.XValues) > 0 {
+		// X values come from column B in the Excel sheet
+		buf.WriteString(fmt.Sprintf(`<c:xVal><c:numRef><c:f>Sheet1!$%s$2:$%s$%d</c:f>`,
+			xValColLetter, xValColLetter, len(opts.Categories)+1))
+		buf.WriteString(fmt.Sprintf(`<c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="%d"/>`, len(series.XValues)))
+		for j, xVal := range series.XValues {
+			buf.WriteString(fmt.Sprintf(`<c:pt idx="%d"><c:v>%g</c:v></c:pt>`, j, xVal))
+		}
+	} else {
+		// Fall back to category indices as X values
+		buf.WriteString(fmt.Sprintf(`<c:xVal><c:numRef><c:f>Sheet1!$%s$2:$%s$%d</c:f>`,
+			colLetter, colLetter, len(opts.Categories)+1))
+		buf.WriteString(fmt.Sprintf(`<c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="%d"/>`, len(series.Values)))
+		for j := 0; j < len(series.Values) && j < len(opts.Categories); j++ {
+			buf.WriteString(fmt.Sprintf(`<c:pt idx="%d"><c:v>%d</c:v></c:pt>`, j, j+1))
+		}
+	}
+	buf.WriteString(`</c:numCache></c:numRef></c:xVal>`)
+
+	// Y values
+	buf.WriteString(fmt.Sprintf(`<c:yVal><c:numRef><c:f>Sheet1!$%s$2:$%s$%d</c:f>`,
+		colLetter, colLetter, len(opts.Categories)+1))
+	buf.WriteString(fmt.Sprintf(`<c:numCache><c:formatCode>General</c:formatCode><c:ptCount val="%d"/>`, len(series.Values)))
+	for j, val := range series.Values {
+		buf.WriteString(fmt.Sprintf(`<c:pt idx="%d"><c:v>%g</c:v></c:pt>`, j, val))
+	}
+	buf.WriteString(`</c:numCache></c:numRef></c:yVal>`)
+
+	// Smooth line for scatter
+	scatterStyle := "marker"
+	if scOpts := opts.ScatterChartOptions; scOpts != nil {
+		if strings.HasPrefix(scOpts.ScatterStyle, "smooth") {
+			buf.WriteString(`<c:smooth val="1"/>`)
+		}
+	}
+
+	// Marker for scatter
+	if !strings.Contains(scatterStyle, "line") || strings.Contains(scatterStyle, "Marker") {
+		buf.WriteString(`<c:marker><c:symbol val="circle"/></c:marker>`)
+	} else {
+		buf.WriteString(`<c:marker><c:symbol val="none"/></c:marker>`)
+	}
+
+	// Per-series data labels
+	if series.DataLabels != nil {
+		buf.WriteString(generateDataLabelsXML(series.DataLabels))
+	}
+
+	buf.WriteString(`</c:ser>`)
+
+	return buf.String()
+}
+
 // columnLetter converts column number to Excel column letter (1=A, 2=B, etc.)
 func columnLetter(col int) string {
 	result := ""
@@ -591,11 +730,17 @@ func generateSheetXML(opts ChartOptions) []byte {
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
   <sheetData>`)
 
+	// Determine if we need X values column (for scatter charts with XValues)
+	hasXValues := opts.ChartKind == ChartKindScatter && len(opts.Series) > 0 && len(opts.Series[0].XValues) > 0
+
 	// Header row with series names
 	buf.WriteString(`<row r="1">`)
 	buf.WriteString(`<c r="A1" t="str"><v></v></c>`) // Empty cell at A1
+	if hasXValues {
+		buf.WriteString(`<c r="B1" t="str"><v>X Values</v></c>`) // X values header
+	}
 	for i, series := range opts.Series {
-		col := columnLetter(i + 2) // B, C, D, etc.
+		col := columnLetter(i + 3) // Start from column C if XValues exist, otherwise B
 		buf.WriteString(fmt.Sprintf(`<c r="%s1" t="str"><v>%s</v></c>`, col, xmlEscape(series.Name)))
 	}
 	buf.WriteString(`</row>`)
@@ -608,10 +753,17 @@ func generateSheetXML(opts ChartOptions) []byte {
 		// Category in column A
 		buf.WriteString(fmt.Sprintf(`<c r="A%d" t="str"><v>%s</v></c>`, rowNum, xmlEscape(category)))
 
+		// X values in column B (if applicable)
+		if hasXValues && len(opts.Series[0].XValues) > i {
+			buf.WriteString(fmt.Sprintf(`<c r="B%d"><v>%g</v></c>`, rowNum, opts.Series[0].XValues[i]))
+		}
+
 		// Values for each series
-		for j, series := range opts.Series {
-			col := columnLetter(j + 2)
-			buf.WriteString(fmt.Sprintf(`<c r="%s%d"><v>%g</v></c>`, col, rowNum, series.Values[i]))
+		for j := range opts.Series {
+			col := columnLetter(j + 3)
+			if i < len(opts.Series[j].Values) {
+				buf.WriteString(fmt.Sprintf(`<c r="%s%d"><v>%g</v></c>`, col, rowNum, opts.Series[j].Values[i]))
+			}
 		}
 
 		buf.WriteString(`</row>`)

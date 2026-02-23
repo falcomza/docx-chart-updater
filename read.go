@@ -158,8 +158,8 @@ func (u *Updater) FindText(pattern string, opts FindOptions) ([]TextMatch, error
 			if err != nil {
 				continue
 			}
-			headerMatches := u.findInXML(raw, searchPattern, opts.MaxResults-len(matches))
-			matches = append(matches, headerMatches...)
+			hdrMatches := u.findInXML(raw, searchPattern, opts.MaxResults-len(matches))
+			matches = append(matches, hdrMatches...)
 			if opts.MaxResults > 0 && len(matches) >= opts.MaxResults {
 				break
 			}
@@ -174,8 +174,8 @@ func (u *Updater) FindText(pattern string, opts FindOptions) ([]TextMatch, error
 			if err != nil {
 				continue
 			}
-			footerMatches := u.findInXML(raw, searchPattern, opts.MaxResults-len(matches))
-			matches = append(matches, footerMatches...)
+			ftrMatches := u.findInXML(raw, searchPattern, opts.MaxResults-len(matches))
+			matches = append(matches, ftrMatches...)
 			if opts.MaxResults > 0 && len(matches) >= opts.MaxResults {
 				break
 			}

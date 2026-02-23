@@ -126,7 +126,8 @@ type LegendOptions struct {
 // SeriesOptions defines per-series customization
 type SeriesOptions struct {
 	Name             string            // Series name
-	Values           []float64         // Data values
+	Values           []float64         // Data values (Y-axis for scatter, values for other charts)
+	XValues          []float64         // X values for scatter charts (if nil, uses category indices)
 	Color            string            // Hex color (e.g., "FF0000")
 	InvertIfNegative bool              // Use different color for negative values (default: false)
 	Smooth           bool              // Smooth lines (for line charts) (default: false)

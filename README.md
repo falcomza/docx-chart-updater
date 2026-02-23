@@ -7,32 +7,52 @@ A powerful Go library for programmatically manipulating Microsoft Word (DOCX) do
 
 ## Features
 
-🎯 **Comprehensive DOCX Manipulation**
-- **Chart Updates**: Modify existing chart data with automatic Excel workbook synchronization
-- **Chart Insertion**: Create professional charts from scratch (bar, line, scatter, and more)
-- **Multi-Chart Workflows**: Insert multiple charts programmatically for bulk report generation
-- **Table Creation**: Insert formatted tables with custom styles, borders, and row heights
-- **Paragraph Insertion**: Add styled text with headings, alignment, list support, and robust anchor positioning
-- **Image Insertion**: Add images with automatic proportional sizing and flexible positioning
-- **Page & Section Breaks**: Control document flow with page and section breaks
-- **Auto-Captions**: Generate auto-numbered captions using Word's SEQ fields for tables and charts
-- **Text Find & Replace**: Search and replace text with regex support throughout documents
-- **Read Operations**: Extract text from paragraphs, tables, headers, and footers
-- **Hyperlinks**: Insert external URLs and internal document links
-- **Bookmarks**: Create, manage, and reference bookmarks for internal navigation and TOC
-- **Headers & Footers**: Professional document headers and footers with automatic page numbering
-- **Document Properties**: Set core properties (Title, Author, Keywords), app properties (Company, Manager), and custom properties
+🎯 **Document Content**
+- **Paragraphs**: Styled text with headings, alignment, lists, and anchor positioning
+- **Tables**: Formatted tables with custom styles, borders, row heights, and cell merging
+- **Images**: Add images with automatic proportional sizing and flexible positioning
+- **Hyperlinks & Bookmarks**: External URLs, internal links, and bookmark management
+- **Lists**: Bullet and numbered lists with nesting support
 
-🛠️ **Advanced Features**
+📊 **Charts**
+- **Chart Updates**: Modify existing chart data with automatic Excel workbook synchronization
+- **Chart Insertion**: Create bar, column, line, pie, area, and scatter charts from scratch
+- **Scatter Charts**: Full XValues support for true scatter/XY data
+- **Multi-Chart Workflows**: Insert multiple charts programmatically
+- **Read Chart Data**: Extract existing chart categories and series
+
+📝 **Document Structure**
+- **Table of Contents**: Generate automatic TOC using Word field codes, with update-on-open support
+- **Page & Section Breaks**: Control document flow with page and section breaks
+- **Page Layout**: Configure page sizes, orientation, and margins per section
+- **Headers & Footers**: Professional headers and footers with page numbering
+- **Page Numbers**: Control starting page number and format (decimal, roman, letters)
+
+✨ **Styles & Formatting**
+- **Custom Styles**: Create paragraph and character styles with full formatting control
+- **Text Watermarks**: Add diagonal or horizontal text watermarks via VML shapes
+- **Auto-Captions**: Generate auto-numbered captions using Word's SEQ fields
+
+📎 **Collaboration & Review**
+- **Comments**: Add and read document comments with author and initials
+- **Track Changes**: Insert text with revision tracking (insertions and deletions)
+- **Footnotes & Endnotes**: Add scholarly footnotes and endnotes with reference markers
+
+🔧 **Operations**
+- **Text Find & Replace**: Search and replace with regex support
+- **Read Operations**: Extract text from paragraphs, tables, headers, and footers
+- **Delete Operations**: Remove paragraphs, tables, images, and charts by index
+- **Update Operations**: Modify existing table cells
+- **Count Operations**: Get counts of paragraphs, tables, images, and charts
+- **Document Properties**: Set core, app, and custom metadata
+
+🛠️ **Advanced**
+- **`io.Reader`/`io.Writer` support**: In-memory document manipulation without disk I/O
 - XML-based chart parsing using Go's `encoding/xml`
 - Automatic Excel formula range adjustment
-- Shared string table support for Excel workbooks
-- Namespace-agnostic XML processing
 - Full OpenXML relationship and content type management
-- Strict workbook resolution via explicit relationships
 - Structured error types for better error handling
-- Case-sensitive and case-insensitive text operations
-- Whole word matching and regex pattern support
+- Golden file tests for XML output verification
 
 ## Installation
 
@@ -47,30 +67,30 @@ package main
 
 import (
     "log"
-    updater "github.com/falcomza/go-docx"
+    godocx "github.com/falcomza/go-docx"
 )
 
 func main() {
     // Open existing DOCX
-    u, err := updater.New("template.docx")
+    u, err := godocx.New("template.docx")
     if err != nil {
         log.Fatal(err)
     }
     defer u.Cleanup()
 
     // Update a chart
-    chartData := updater.ChartData{
+    chartData := godocx.ChartData{
         Categories: []string{"Q1", "Q2", "Q3", "Q4"},
-        Series: []updater.SeriesData{
+        Series: []godocx.SeriesData{
             {Name: "Revenue", Values: []float64{100, 150, 120, 180}},
             {Name: "Costs", Values: []float64{80, 90, 85, 95}},
         },
     }
     u.UpdateChart(1, chartData)
 
-    // Add a table with caption
-    u.InsertTable(updater.TableOptions{
-        Columns: []updater.ColumnDefinition{
+    // Add a table
+    u.InsertTable(godocx.TableOptions{
+        Columns: []godocx.ColumnDefinition{
             {Title: "Product"},
             {Title: "Sales"},
             {Title: "Growth"},
@@ -79,14 +99,9 @@ func main() {
             {"Product A", "$1.2M", "+15%"},
             {"Product B", "$980K", "+8%"},
         },
-        TableStyle: updater.TableStyleGridAccent1,
-        Position:   updater.PositionEnd,
+        TableStyle: godocx.TableStyleGridAccent1,
+        Position:   godocx.PositionEnd,
         HeaderBold: true,
-    })
-    u.AddCaption(updater.CaptionOptions{
-        Type:     updater.CaptionTypeTable,
-        Label:    "Table",
-        Position: updater.PositionEnd,
     })
 
     // Save result
@@ -100,15 +115,13 @@ func main() {
 
 ### Updating Chart Data
 
-Update existing charts in a DOCX template:
-
 ```go
-u, _ := updater.New("template.docx")
+u, _ := godocx.New("template.docx")
 defer u.Cleanup()
 
-data := updater.ChartData{
+data := godocx.ChartData{
     Categories: []string{"Jan", "Feb", "Mar", "Apr"},
-    Series: []updater.SeriesData{
+    Series: []godocx.SeriesData{
         {Name: "Sales", Values: []float64{250, 300, 275, 350}},
     },
 }
@@ -117,718 +130,775 @@ u.UpdateChart(1, data) // Update first chart (1-based index)
 u.Save("updated.docx")
 ```
 
-### Inserting New Charts
+### Inserting Charts
 
-Create charts from scratch:
+Create charts from scratch, including scatter charts with custom X values:
 
 ```go
-u, _ := updater.New("document.docx")
+u, _ := godocx.New("document.docx")
 defer u.Cleanup()
 
-chartOptions := updater.ChartOptions{
+// Column chart
+u.InsertChart(godocx.ChartOptions{
     Title:      "Quarterly Revenue",
-    ChartKind:  updater.ChartKindColumn,
-    Position:   updater.PositionEnd,
+    ChartKind:  godocx.ChartKindColumn,
+    Position:   godocx.PositionEnd,
     Categories: []string{"Q1", "Q2", "Q3", "Q4"},
-    Series: []updater.SeriesOptions{
+    Series: []godocx.SeriesOptions{
         {Name: "2025", Values: []float64{100, 120, 110, 130}},
         {Name: "2026", Values: []float64{110, 130, 125, 145}},
     },
-}
+})
 
-u.InsertChart(chartOptions)
-u.Save("with_chart.docx")
+// Scatter chart with custom X values
+u.InsertChart(godocx.ChartOptions{
+    Title:     "Correlation Analysis",
+    ChartKind: godocx.ChartKindScatter,
+    Position:  godocx.PositionEnd,
+    ScatterChartOptions: &godocx.ScatterChartOptions{
+        ScatterStyle: "smoothMarker",
+    },
+    Categories: []string{"Point 1", "Point 2", "Point 3"},
+    Series: []godocx.SeriesOptions{
+        {
+            Name:    "Dataset A",
+            Values:  []float64{10, 25, 40},
+            XValues: []float64{1.5, 3.0, 4.5}, // Custom X values
+        },
+    },
+})
+
+u.Save("with_charts.docx")
 ```
+
+**Supported chart types:** `ChartKindColumn`, `ChartKindBar`, `ChartKindLine`, `ChartKindPie`, `ChartKindArea`, `ChartKindScatter`
+
+> **Note:** `ChartData` / `SeriesData` are used when *updating* existing charts (`UpdateChart`), while `ChartOptions` / `SeriesOptions` are used when *inserting* new charts (`InsertChart`).
 
 ### Creating Tables
 
-Insert styled tables with comprehensive formatting:
-
 ```go
-u, _ := updater.New("document.docx")
+u, _ := godocx.New("document.docx")
 defer u.Cleanup()
 
-u.InsertTable(updater.TableOptions{
-    Columns: []updater.ColumnDefinition{
-        {Title: "Product"},
-        {Title: "Q1"},
-        {Title: "Q2"},
-        {Title: "Q3"},
-        {Title: "Q4"},
+u.InsertTable(godocx.TableOptions{
+    Columns: []godocx.ColumnDefinition{
+        {Title: "Product", Width: 2000, Bold: true},
+        {Title: "Q1", Width: 1200},
+        {Title: "Q2", Width: 1200},
     },
     Rows: [][]string{
-        {"Product A", "$120K", "$135K", "$128K", "$150K"},
-        {"Product B", "$98K", "$105K", "$112K", "$118K"},
-        {"Product C", "$85K", "$92K", "$88K", "$95K"},
+        {"Product A", "$120K", "$135K"},
+        {"Product B", "$98K", "$105K"},
     },
-    TableStyle: updater.TableStyleGridAccent1,
-    Position:   updater.PositionEnd,
+    TableStyle: godocx.TableStyleGridAccent1,
+    Position:   godocx.PositionEnd,
     HeaderBold: true,
-    RowHeight:  280, // In twips (1/1440 inch)
+    RowHeight:  280,
 })
+
+// Update an existing cell
+u.UpdateTableCell(1, 2, 3, "$140K") // table 1, row 2, col 3
+
+// Merge cells horizontally (columns 1-3 in row 1)
+u.MergeTableCellsHorizontal(1, 1, 1, 3)
+
+// Merge cells vertically (rows 1-3 in column 1)
+u.MergeTableCellsVertical(1, 1, 3, 1)
+
 u.Save("with_table.docx")
 ```
 
 ### Adding Paragraphs
 
-Insert formatted text with various styles:
-
 ```go
-u, _ := updater.New("document.docx")
+u, _ := godocx.New("document.docx")
 defer u.Cleanup()
 
-// Add heading
-u.AddHeading(1, "Executive Summary", updater.PositionEnd)
+u.AddHeading(1, "Executive Summary", godocx.PositionEnd)
 
-// Add normal text
-u.AddText("This quarter showed strong growth across all regions.", updater.PositionEnd)
+u.AddText("This quarter showed strong growth.", godocx.PositionEnd)
 
-// Add formatted paragraph
-u.InsertParagraph(updater.ParagraphOptions{
+u.InsertParagraph(godocx.ParagraphOptions{
     Text:      "Important: Review required",
     Bold:      true,
     Italic:    true,
-    Underline: true,
-    Alignment: updater.ParagraphAlignCenter,
-    Position:  updater.PositionEnd,
+    Alignment: godocx.ParagraphAlignCenter,
+    Position:  godocx.PositionEnd,
 })
 
-// Add paragraph after anchor text (works across split Word runs)
-u.InsertParagraph(updater.ParagraphOptions{
+// Anchor-based positioning (works across split Word runs)
+u.InsertParagraph(godocx.ParagraphOptions{
     Text:     "Follow-up details",
-    Position: updater.PositionAfterText,
+    Position: godocx.PositionAfterText,
     Anchor:   "Executive Summary",
 })
 
 // Newlines and tabs are emitted as <w:br/> and <w:tab/>
-u.InsertParagraph(updater.ParagraphOptions{
+u.InsertParagraph(godocx.ParagraphOptions{
     Text:     "Line 1\nLine 2\tTabbed",
-    Position: updater.PositionEnd,
+    Position: godocx.PositionEnd,
 })
 
 u.Save("with_paragraphs.docx")
 ```
 
-**Paragraph Notes:**
-- Supports alignment via `ParagraphAlignLeft`, `ParagraphAlignCenter`, `ParagraphAlignRight`, `ParagraphAlignJustify`
-- `PositionEnd` insertion is section-safe (`w:sectPr` remains the final element in `<w:body>`)
-- Anchor matching for `PositionAfterText` / `PositionBeforeText` is paragraph-aware and resilient to split runs
-- Anchor matching also tolerates normalized whitespace differences (spaces/newlines/tabs)
+### Table of Contents
+
+Generate an automatic Table of Contents using Word field codes:
+
+```go
+u, _ := godocx.New("document.docx")
+defer u.Cleanup()
+
+// Insert TOC at the beginning
+u.InsertTOC(godocx.TOCOptions{
+    Title:         "Table of Contents",
+    OutlineLevels: "1-3",
+    Position:      godocx.PositionBeginning,
+})
+
+// Add headings (these will appear in the TOC)
+u.AddHeading(1, "Chapter 1: Introduction", godocx.PositionEnd)
+u.AddText("Introduction content...", godocx.PositionEnd)
+u.AddHeading(2, "1.1 Background", godocx.PositionEnd)
+u.AddText("Background content...", godocx.PositionEnd)
+
+// Mark TOC for update (Word recalculates on open)
+u.UpdateTOC()
+
+// Read existing TOC entries
+entries, _ := u.GetTOCEntries()
+for _, entry := range entries {
+    fmt.Printf("Level %d: %s\n", entry.Level, entry.Text)
+}
+
+u.Save("with_toc.docx")
+```
+
+### Custom Styles
+
+Create and apply custom paragraph and character styles:
+
+```go
+u, _ := godocx.New("document.docx")
+defer u.Cleanup()
+
+u.AddStyles([]godocx.StyleDefinition{
+    {
+        ID:         "DocTitle",
+        Name:       "Document Title",
+        Type:       godocx.StyleTypeParagraph,
+        BasedOn:    "Normal",
+        FontFamily: "Calibri",
+        FontSize:   56, // half-points (56 = 28pt)
+        Color:      "1F4E79",
+        Bold:       true,
+        Alignment:  godocx.ParagraphAlignCenter,
+        SpaceAfter: 240,
+    },
+    {
+        ID:     "Highlight",
+        Name:   "Strong Emphasis",
+        Type:   godocx.StyleTypeCharacter,
+        Bold:   true,
+        Italic: true,
+        Color:  "C00000",
+    },
+})
+
+// Use the custom style
+u.InsertParagraph(godocx.ParagraphOptions{
+    Text:     "My Document Title",
+    Style:    "DocTitle",
+    Position: godocx.PositionBeginning,
+})
+
+u.Save("with_styles.docx")
+```
+
+### Watermarks
+
+Add text watermarks to documents:
+
+```go
+u, _ := godocx.New("document.docx")
+defer u.Cleanup()
+
+u.SetTextWatermark(godocx.WatermarkOptions{
+    Text:       "CONFIDENTIAL",
+    FontFamily: "Calibri",
+    Color:      "C0C0C0",
+    Opacity:    0.3,
+    Diagonal:   true, // 315-degree rotation
+})
+
+u.Save("watermarked.docx")
+```
+
+### Page Numbers
+
+Control page numbering format and starting number:
+
+```go
+u, _ := godocx.New("document.docx")
+defer u.Cleanup()
+
+u.SetPageNumber(godocx.PageNumberOptions{
+    Start:  1,
+    Format: godocx.PageNumDecimal, // also: PageNumUpperRoman, PageNumLowerRoman, etc.
+})
+
+u.Save("with_page_numbers.docx")
+```
+
+### Footnotes and Endnotes
+
+```go
+u, _ := godocx.New("document.docx")
+defer u.Cleanup()
+
+u.AddText("The experiment showed significant results.", godocx.PositionEnd)
+
+// Insert footnote at anchor text
+u.InsertFootnote(godocx.FootnoteOptions{
+    Text:   "Based on data collected in Q3 2026.",
+    Anchor: "significant results",
+})
+
+// Insert endnote at anchor text
+u.InsertEndnote(godocx.EndnoteOptions{
+    Text:   "See full methodology in Appendix A.",
+    Anchor: "experiment",
+})
+
+u.Save("with_notes.docx")
+```
+
+### Comments
+
+Add and read document comments:
+
+```go
+u, _ := godocx.New("document.docx")
+defer u.Cleanup()
+
+u.AddText("Revenue grew 15% this quarter.", godocx.PositionEnd)
+
+u.InsertComment(godocx.CommentOptions{
+    Text:     "Please verify this figure with accounting.",
+    Author:   "Jane Reviewer",
+    Initials: "JR",
+    Anchor:   "grew 15%",
+})
+
+// Read existing comments
+comments, _ := u.GetComments()
+for _, c := range comments {
+    fmt.Printf("%s: %s\n", c.Author, c.Text)
+}
+
+u.Save("with_comments.docx")
+```
+
+### Track Changes
+
+Insert and delete text with revision tracking:
+
+```go
+u, _ := godocx.New("document.docx")
+defer u.Cleanup()
+
+// Insert tracked text (green underline in Word)
+u.InsertTrackedText(godocx.TrackedInsertOptions{
+    Text:     "This paragraph was added during review.",
+    Author:   "Jane Reviewer",
+    Date:     time.Now(),
+    Position: godocx.PositionEnd,
+    Bold:     true,
+})
+
+// Mark existing text as deleted (red strikethrough in Word)
+u.DeleteTrackedText(godocx.TrackedDeleteOptions{
+    Anchor: "paragraph to be removed",
+    Author: "Jane Reviewer",
+    Date:   time.Now(),
+})
+
+u.Save("with_tracked_changes.docx")
+```
+
+### Delete Operations
+
+Remove content from documents:
+
+```go
+u, _ := godocx.New("document.docx")
+defer u.Cleanup()
+
+// Delete paragraphs containing specific text
+count, _ := u.DeleteParagraphs("draft", godocx.DeleteOptions{MatchCase: false})
+fmt.Printf("Deleted %d paragraphs\n", count)
+
+// Delete by index (1-based)
+u.DeleteTable(2)  // Remove 2nd table
+u.DeleteImage(1)  // Remove 1st image
+u.DeleteChart(1)  // Remove 1st chart
+
+// Count operations
+tableCount, _ := u.GetTableCount()
+paraCount, _ := u.GetParagraphCount()
+imageCount, _ := u.GetImageCount()
+chartCount, _ := u.GetChartCount()
+
+u.Save("cleaned.docx")
+```
+
+### io.Reader / io.Writer Support
+
+Work with documents in memory without disk I/O:
+
+```go
+import (
+    "bytes"
+    "os"
+    godocx "github.com/falcomza/go-docx"
+)
+
+// Open from io.Reader (e.g., HTTP upload, S3 object, etc.)
+file, _ := os.Open("template.docx")
+defer file.Close()
+
+u, _ := godocx.NewFromReader(file)
+defer u.Cleanup()
+
+u.AddText("Added via io.Reader", godocx.PositionEnd)
+
+// Save to io.Writer (e.g., HTTP response, S3 upload, etc.)
+var buf bytes.Buffer
+u.SaveToWriter(&buf)
+
+// buf.Bytes() contains the complete DOCX file
+os.WriteFile("output.docx", buf.Bytes(), 0o644)
+```
 
 ### Inserting Images
 
-Add images with automatic proportional sizing:
-
 ```go
-u, _ := updater.New("document.docx")
+u, _ := godocx.New("document.docx")
 defer u.Cleanup()
 
-// Insert image with width only - height calculated proportionally
-u.InsertImage(updater.ImageOptions{
+// Width only — height calculated proportionally
+u.InsertImage(godocx.ImageOptions{
     Path:     "images/logo.png",
-    Width:    400,  // pixels
+    Width:    400,
     AltText:  "Company Logo",
-    Position: updater.PositionEnd,
+    Position: godocx.PositionEnd,
 })
 
-// Insert image with height only - width calculated proportionally
-u.InsertImage(updater.ImageOptions{
-    Path:     "images/chart.jpg",
-    Height:   300,  // pixels
-    AltText:  "Chart Illustration",
-    Position: updater.PositionEnd,
-})
-
-// Insert image with both dimensions (may distort if not proportional)
-u.InsertImage(updater.ImageOptions{
-    Path:     "images/photo.png",
+// With auto-numbered caption
+u.InsertImage(godocx.ImageOptions{
+    Path:     "images/chart.png",
     Width:    500,
-    Height:   400,
-    Position: updater.PositionEnd,
-})
-
-// Insert image with actual file dimensions
-u.InsertImage(updater.ImageOptions{
-    Path:     "images/screenshot.png",
-    AltText:  "Application Screenshot",
-    Position: updater.PositionEnd,
-})
-
-// Insert image after specific text
-u.InsertImage(updater.ImageOptions{
-    Path:     "images/diagram.png",
-    Width:    600,
-    Position: updater.PositionAfterText,
-    Anchor:   "See diagram below",
+    Position: godocx.PositionEnd,
+    Caption: &godocx.CaptionOptions{
+        Type:        godocx.CaptionFigure,
+        Description: "Q1 Sales Performance",
+        AutoNumber:  true,
+    },
 })
 
 u.Save("with_images.docx")
 ```
 
-**Proportional Sizing:**
-
-- Specify only `Width`: Height calculated automatically
-- Specify only `Height`: Width calculated automatically
-- Specify both: Used as-is (may distort)
-- Specify neither: Uses actual image dimensions
-
-**Supported Formats:**
-
-- PNG, JPEG, GIF, BMP, TIFF
-
-**Image Captions:**
-
-Images support auto-numbered captions using Word's SEQ fields:
-
-```go
-// Insert image with auto-numbered caption (Figure 1, Figure 2, etc.)
-u.InsertImage(updater.ImageOptions{
-    Path:     "images/chart.png",
-    Width:    500,
-    AltText:  "Sales Chart",
-    Position: updater.PositionEnd,
-    Caption: &updater.CaptionOptions{
-        Type:        updater.CaptionFigure,
-        Description: "Q1 Sales Performance",
-        AutoNumber:  true,
-        Position:    updater.CaptionAfter, // Caption below image (default)
-    },
-})
-
-// Image with caption above
-u.InsertImage(updater.ImageOptions{
-    Path:     "images/diagram.png",
-    Height:   350,
-    Position: updater.PositionEnd,
-    Caption: &updater.CaptionOptions{
-        Type:        updater.CaptionFigure,
-        Description: "Process Flow Diagram",
-        AutoNumber:  true,
-        Position:    updater.CaptionBefore, // Caption above image
-        Alignment:   updater.CellAlignCenter, // Center the caption
-    },
-})
-```
+**Proportional sizing:** Specify only `Width` (height auto-calculated), only `Height` (width auto-calculated), both (used as-is), or neither (actual image dimensions). Supported formats: PNG, JPEG, GIF, BMP, TIFF.
 
 ### Page and Section Breaks
 
-Control document flow and layout with breaks:
-
 ```go
-u, _ := updater.New("document.docx")
+u, _ := godocx.New("document.docx")
 defer u.Cleanup()
 
-// Insert a page break to start new content on next page
-u.InsertPageBreak(updater.BreakOptions{
-    Position: updater.PositionEnd,
+u.InsertPageBreak(godocx.BreakOptions{
+    Position: godocx.PositionEnd,
 })
 
-// Insert page break after specific text
-u.InsertPageBreak(updater.BreakOptions{
-    Position: updater.PositionAfterText,
-    Anchor:   "End of Chapter 1",
-})
-
-// Insert section break (next page) - allows different page settings
-u.InsertSectionBreak(updater.BreakOptions{
-    Position:    updater.PositionEnd,
-    SectionType: updater.SectionBreakNextPage,
-    PageLayout:  updater.PageLayoutA3Landscape(),
-})
-
-// Insert continuous section break (same page, different formatting)
-u.InsertSectionBreak(updater.BreakOptions{
-    Position:    updater.PositionEnd,
-    SectionType: updater.SectionBreakContinuous,
-})
-
-// Insert even/odd page section breaks (for double-sided printing)
-u.InsertSectionBreak(updater.BreakOptions{
-    Position:    updater.PositionEnd,
-    SectionType: updater.SectionBreakEvenPage,
-})
-
-u.InsertSectionBreak(updater.BreakOptions{
-    Position:    updater.PositionEnd,
-    SectionType: updater.SectionBreakOddPage,
+u.InsertSectionBreak(godocx.BreakOptions{
+    Position:    godocx.PositionEnd,
+    SectionType: godocx.SectionBreakNextPage,
+    PageLayout:  godocx.PageLayoutA3Landscape(),
 })
 
 u.Save("with_breaks.docx")
 ```
 
-**Section Break Types:**
+**Section break types:** `SectionBreakNextPage`, `SectionBreakContinuous`, `SectionBreakEvenPage`, `SectionBreakOddPage`
 
-- `SectionBreakNextPage` - Start new section on next page
-- `SectionBreakContinuous` - Start new section on same page
-- `SectionBreakEvenPage` - Start new section on next even page
-- `SectionBreakOddPage` - Start new section on next odd page
+**Layout helpers:** `PageLayoutLetterPortrait()`, `PageLayoutLetterLandscape()`, `PageLayoutA4Portrait()`, `PageLayoutA4Landscape()`, `PageLayoutA3Portrait()`, `PageLayoutA3Landscape()`, `PageLayoutLegalPortrait()`
 
-**Use Cases:**
-
-- Page breaks: Separate chapters, start appendices on new pages
-- Section breaks: Different page orientations, margins, headers/footers per section
-- Even/Odd breaks: Professional double-sided printing layouts
-
-**Layout Helper Functions:**
-
-- `PageLayoutLetterPortrait()` / `PageLayoutLetterLandscape()`
-- `PageLayoutA4Portrait()` / `PageLayoutA4Landscape()`
-- `PageLayoutA3Portrait()` / `PageLayoutA3Landscape()`
-- `PageLayoutLegalPortrait()`
-
-### Auto-Numbering Captions
-
-Add captions with automatic sequential numbering:
+### Hyperlinks and Bookmarks
 
 ```go
-u, _ := updater.New("document.docx")
+u, _ := godocx.New("document.docx")
 defer u.Cleanup()
 
-// Insert table
-u.InsertTable(tableOptions)
-
-// Add caption below the table
-u.AddCaption(updater.CaptionOptions{
-    Type:     updater.CaptionTypeTable,
-    Label:    "Table",
-    Text:     "Quarterly Sales Data",
-    Position: updater.PositionEnd,
+// External hyperlink
+u.InsertHyperlink("Visit GitHub", "https://github.com/falcomza/go-docx", godocx.HyperlinkOptions{
+    Position:  godocx.PositionEnd,
+    Color:     "0563C1",
+    Underline: true,
+    Tooltip:   "Open repository",
 })
 
-// Insert chart
-u.InsertChart(chartOptions)
-
-// Add caption below the chart
-u.AddCaption(updater.CaptionOptions{
-    Type:     updater.CaptionTypeChart,
-    Label:    "Figure",
-    Text:     "Revenue Trends 2025-2026",
-    Position: updater.PositionEnd,
+// Create bookmark with heading text
+u.CreateBookmarkWithText("summary", "Executive Summary", godocx.BookmarkOptions{
+    Position: godocx.PositionEnd,
+    Style:    godocx.StyleHeading1,
 })
 
-u.Save("with_captions.docx")
+// Internal link to bookmark
+u.InsertInternalLink("Go to Summary", "summary", godocx.HyperlinkOptions{
+    Position:  godocx.PositionBeginning,
+    Color:     "0563C1",
+    Underline: true,
+})
+
+u.Save("with_links.docx")
 ```
 
-### Multiple Charts
-
-Create multiple charts for bulk report generation:
+### Headers and Footers
 
 ```go
-u, _ := updater.New("template.docx")
+u, _ := godocx.New("document.docx")
 defer u.Cleanup()
 
-// salesData is [][]updater.SeriesOptions, regions is [][]string
-// Insert three charts with different data
-for i := 0; i < 3; i++ {
-    chartOptions := updater.ChartOptions{
-        Position:   updater.PositionEnd,
-        ChartKind:  updater.ChartKindColumn,
-        Title:      fmt.Sprintf("Regional Report %d", i+1),
-        Categories: regions[i],
-        Series:     salesData[i], // salesData[i] is []updater.SeriesOptions
-        ShowLegend: true,
-    }
-    u.InsertChart(chartOptions)
-}
+u.SetHeader(godocx.HeaderFooterContent{
+    LeftText:   "Company Name",
+    CenterText: "Confidential Report",
+    RightText:  "Feb 2026",
+}, godocx.DefaultHeaderOptions())
 
-u.Save("multi_chart_report.docx")
+u.SetFooter(godocx.HeaderFooterContent{
+    CenterText:       "Page ",
+    PageNumber:       true,
+    PageNumberFormat: "X of Y",
+}, godocx.DefaultFooterOptions())
+
+u.Save("with_headers_footers.docx")
 ```
 
 ### Text Find & Replace
 
-Search and replace text throughout the document:
-
 ```go
-u, _ := updater.New("document.docx")
+u, _ := godocx.New("document.docx")
 defer u.Cleanup()
 
-// Simple case-insensitive replacement
-opts := updater.DefaultReplaceOptions()
-count, err := u.ReplaceText("{{name}}", "John Doe", opts)
-fmt.Printf("Replaced %d occurrences\n", count)
+opts := godocx.DefaultReplaceOptions()
+count, _ := u.ReplaceText("{{name}}", "John Doe", opts)
 
-// Case-sensitive whole word replacement
-opts.MatchCase = true
-opts.WholeWord = true
-count, err = u.ReplaceText("API", "Application Programming Interface", opts)
-
-// Replace with regex pattern
-pattern := regexp.MustCompile(`\d{3}-\d{3}-\d{4}`) // Phone numbers
-count, err = u.ReplaceTextRegex(pattern, "[REDACTED]", opts)
-
-// Replace in specific locations
-opts.InParagraphs = true
-opts.InTables = true
-opts.InHeaders = true  // Also replace in headers
-opts.InFooters = true  // Also replace in footers
-
-// Limit number of replacements
-opts.MaxReplacements = 5  // Replace only first 5 occurrences
+// Regex replacement
+pattern := regexp.MustCompile(`\d{3}-\d{3}-\d{4}`)
+count, _ = u.ReplaceTextRegex(pattern, "[REDACTED]", opts)
 
 u.Save("replaced.docx")
 ```
 
 ### Read Operations
 
-Extract and search for text in documents:
-
 ```go
-u, _ := updater.New("document.docx")
+u, _ := godocx.New("document.docx")
 defer u.Cleanup()
 
-// Get all text from document
-text, err := u.GetText()
-fmt.Println(text)
+text, _ := u.GetText()                // All document text
+paragraphs, _ := u.GetParagraphText()  // Text by paragraphs
+tables, _ := u.GetTableText()          // Text from tables
 
-// Get text by paragraphs
-paragraphs, err := u.GetParagraphText()
-for i, para := range paragraphs {
-    fmt.Printf("Paragraph %d: %s\n", i, para)
+// Find text with context
+opts := godocx.DefaultFindOptions()
+matches, _ := u.FindText("TODO:", opts)
+for _, m := range matches {
+    fmt.Printf("Paragraph %d: %s\n", m.Paragraph, m.Text)
 }
-
-// Get text from tables
-tables, err := u.GetTableText()
-for i, table := range tables {
-    fmt.Printf("Table %d:\n", i)
-    for _, row := range table {
-        fmt.Printf("  Row: %v\n", row)
-    }
-}
-
-// Find all occurrences of text
-opts := updater.DefaultFindOptions()
-opts.MatchCase = false
-matches, err := u.FindText("TODO:", opts)
-
-for _, match := range matches {
-    fmt.Printf("Found at paragraph %d: %s\n", match.Paragraph, match.Text)
-    fmt.Printf("  Before: ...%s\n", match.Before)
-    fmt.Printf("  After: %s...\n", match.After)
-}
-
-// Find with regex
-opts.UseRegex = true
-matches, err = u.FindText(`\b[A-Z]{2,}\b`, opts) // Find acronyms
-
-// Limit search results
-opts.MaxResults = 10  // Return only first 10 matches
 ```
 
-### Hyperlinks
-
-Insert clickable links to external URLs or internal bookmarks:
+### Document Properties
 
 ```go
-u, _ := updater.New("document.docx")
+u, _ := godocx.New("template.docx")
 defer u.Cleanup()
 
-// Insert external hyperlink
-opts := updater.DefaultHyperlinkOptions()
-opts.Position = updater.PositionEnd
-opts.Tooltip = "Visit our website"
+u.SetCoreProperties(godocx.CoreProperties{
+    Title:   "Q4 Report",
+    Creator: "Finance Dept",
+})
 
-err := u.InsertHyperlink("Click here", "https://example.com", opts)
+u.SetAppProperties(godocx.AppProperties{
+    Company: "ACME Corp",
+})
 
-// Insert hyperlink after specific text
-opts.Position = updater.PositionAfterText
-opts.Anchor = "See our website"
-err = u.InsertHyperlink("example.com", "https://example.com", opts)
-
-// Customize hyperlink appearance
-opts.Color = "FF0000"     // Red color
-opts.Underline = true     // Underline (default)
-opts.ScreenTip = "Link"   // Accessibility text
-
-// Insert email link
-err = u.InsertHyperlink("Contact Us", "mailto:info@example.com", opts)
-
-// Insert internal link to bookmark
-err = u.InsertInternalLink("Go to Summary", "summary_bookmark", opts)
-
-u.Save("with_links.docx")
-```
-
-### Bookmarks
-
-Create bookmarks to mark locations in your document and enable internal navigation:
-
-```go
-u, _ := updater.New("document.docx")
-defer u.Cleanup()
-
-// Create an empty bookmark (position marker)
-opts := updater.DefaultBookmarkOptions()
-opts.Position = updater.PositionEnd
-err := u.CreateBookmark("section_marker", opts)
-
-// Create bookmark with text content
-opts.Style = updater.StyleHeading1
-err = u.CreateBookmarkWithText("executive_summary", "Executive Summary", opts)
-
-// Wrap existing text in a bookmark
-err = u.WrapTextInBookmark("key_finding", "important result")
-
-// Create internal links to bookmarks
-linkOpts := updater.DefaultHyperlinkOptions()
-linkOpts.Position = updater.PositionBeginning
-err = u.InsertInternalLink("Jump to Summary", "executive_summary", linkOpts)
-
-// Position-based bookmark insertion
-opts.Position = updater.PositionAfterText
-opts.Anchor = "Chapter 3"
-err = u.CreateBookmark("chapter3_bookmark", opts)
-
-u.Save("with_bookmarks.docx")
-```
-
-**Bookmark Name Rules:**
-- Must start with a letter
-- Can contain letters, digits, and underscores
-- No spaces or special characters (except underscore)
-- Maximum 40 characters
-- Cannot start with reserved prefixes (`_Toc`, `_Hlt`, `_Ref`, `_GoBack`)
-
-**Common Use Cases:**
-- Table of contents with clickable links
-- Cross-references within documents
-- Navigation between sections
-- Marking important locations for reference
-
-### Headers and Footers
-
-Add professional headers and footers with automatic page numbering:
-
-```go
-u, _ := updater.New("document.docx")
-defer u.Cleanup()
-
-// Create header with three-column layout
-headerContent := updater.HeaderFooterContent{
-    LeftText:   "Company Name",
-    CenterText: "Confidential Report",
-    RightText:  "Date: Feb 2026",
-    PageNumber: false,
-}
-
-headerOpts := updater.DefaultHeaderOptions()
-headerOpts.Type = updater.HeaderDefault
-err := u.SetHeader(headerContent, headerOpts)
-
-// Create footer with page numbers
-footerContent := updater.HeaderFooterContent{
-    CenterText:       "Page ",
-    PageNumber:       true,
-    PageNumberFormat: "X of Y",  // Shows "Page 1 of 10"
-}
-
-footerOpts := updater.DefaultFooterOptions()
-err = u.SetFooter(footerContent, footerOpts)
-
-// Different header for first page
-headerOpts.Type = updater.HeaderFirst
-headerOpts.DifferentFirst = true
-firstPageHeader := updater.HeaderFooterContent{
-    CenterText: "Title Page - No Header",
-}
-err = u.SetHeader(firstPageHeader, headerOpts)
-
-// Different headers for odd/even pages (for double-sided printing)
-headerOpts.DifferentOddEven = true
-
-// Odd pages (right side)
-headerOpts.Type = updater.HeaderDefault
-oddHeader := updater.HeaderFooterContent{
-    RightText: "Chapter 1",
-}
-err = u.SetHeader(oddHeader, headerOpts)
-
-// Even pages (left side)
-headerOpts.Type = updater.HeaderEven
-evenHeader := updater.HeaderFooterContent{
-    LeftText: "Chapter 1",
-}
-err = u.SetHeader(evenHeader, headerOpts)
-
-// Add date field to footer
-footerContent.Date = true
-footerContent.DateFormat = "MMMM d, yyyy"  // "January 1, 2026"
-
-u.Save("with_headers_footers.docx")
-```
-
-### Setting Document Properties
-
-Set core, application, and custom document properties:
-
-```go
-u, _ := updater.New("template.docx")
-defer u.Cleanup()
-
-// Set core properties (visible in File > Info)
-coreProps := updater.CoreProperties{
-    Title:          "Q4 2026 Financial Report",
-    Subject:        "Quarterly Financial Analysis",
-    Creator:        "Finance Department",
-    Keywords:       "finance, Q4, 2026, revenue, analysis",
-    Description:    "Comprehensive financial report for Q4 2026",
-    Category:       "Financial Reports",
-    LastModifiedBy: "John Doe",
-    Revision:       "2",
-    Created:        time.Date(2026, 1, 1, 9, 0, 0, 0, time.UTC),
-    Modified:       time.Now(),
-}
-err := u.SetCoreProperties(coreProps)
-
-// Set application properties
-appProps := updater.AppProperties{
-    Company:     "TechVenture Inc",
-    Manager:     "Sarah Williams",
-    Application: "Microsoft Word",
-    AppVersion:  "16.0000",
-}
-err = u.SetAppProperties(appProps)
-
-// Set custom properties (for workflow automation, metadata tracking, etc.)
-customProps := []updater.CustomProperty{
-    {Name: "Department", Value: "Finance", Type: "lpwstr"},
-    {Name: "FiscalYear", Value: 2026, Type: "i4"},
-    {Name: "Quarter", Value: "Q4"},
-    {Name: "Revenue", Value: 15750000.50, Type: "r8"},
-    {Name: "IsApproved", Value: true, Type: "bool"},
-    {Name: "ProjectCode", Value: "FIN-Q4-2026"},
-    {Name: "ConfidentialityLevel", Value: "High"},
-}
-err = u.SetCustomProperties(customProps)
-
-// Read core properties
-props, err := u.GetCoreProperties()
-fmt.Printf("Title: %s, Author: %s\n", props.Title, props.Creator)
+u.SetCustomProperties([]godocx.CustomProperty{
+    {Name: "Department", Value: "Engineering"},
+    {Name: "Version", Value: "2.1.0"},
+})
 
 u.Save("with_properties.docx")
 ```
 
-**Property Types:**
-- Core Properties: Title, Subject, Creator, Keywords, Description, Category, LastModifiedBy, Revision, Created, Modified
-- App Properties: Company, Manager, Application, AppVersion
-- Custom Properties: Any key-value pairs with types: string (`lpwstr`), integer (`i4`), float (`r8`), boolean (`bool`), date (`date`)
+### Lists
+
+```go
+u, _ := godocx.New("document.docx")
+defer u.Cleanup()
+
+u.AddBulletList([]string{
+    "First item",
+    "Second item",
+    "Third item",
+}, 0, godocx.PositionEnd)
+
+u.AddNumberedList([]string{
+    "Step 1: Planning",
+    "Step 2: Development",
+    "Step 3: Testing",
+}, 0, godocx.PositionEnd)
+
+u.Save("with_lists.docx")
+```
 
 ## API Overview
 
-### Chart Operations
-- `UpdateChart(index int, data ChartData)` - Update existing chart data
-- `InsertChart(options ChartOptions)` - Create new chart from scratch
-
-### Table Operations
-- `InsertTable(options TableOptions)` - Insert formatted table with custom styling (columns and rows are fields inside `TableOptions`)
+### Core Operations
+| Method | Description |
+|--------|-------------|
+| `New(filepath string)` | Open DOCX file from disk |
+| `NewFromReader(r io.Reader)` | Open DOCX from any `io.Reader` |
+| `Save(outputPath string)` | Save document to disk |
+| `SaveToWriter(w io.Writer)` | Save document to any `io.Writer` |
+| `Cleanup()` | Clean up temporary files |
 
 ### Paragraph Operations
-- `InsertParagraph(options ParagraphOptions)` - Insert styled paragraph
-- `InsertParagraphs(paragraphs []ParagraphOptions)` - Insert multiple paragraphs
-- `AddHeading(level int, text string, position InsertPosition)` - Insert heading paragraph
-- `AddText(text string, position InsertPosition)` - Insert normal paragraph text
-- `AddBulletItem(text string, level int, position InsertPosition)` - Insert bullet list item
-- `AddNumberedItem(text string, level int, position InsertPosition)` - Insert numbered list item
+| Method | Description |
+|--------|-------------|
+| `InsertParagraph(opts ParagraphOptions)` | Insert styled paragraph |
+| `InsertParagraphs(paragraphs []ParagraphOptions)` | Insert multiple paragraphs |
+| `AddHeading(level, text, position)` | Insert heading |
+| `AddText(text, position)` | Insert normal text |
+| `AddBulletItem(text, level, position)` | Insert bullet item |
+| `AddBulletList(items, level, position)` | Insert bullet list |
+| `AddNumberedItem(text, level, position)` | Insert numbered item |
+| `AddNumberedList(items, level, position)` | Insert numbered list |
+
+### Table Operations
+| Method | Description |
+|--------|-------------|
+| `InsertTable(opts TableOptions)` | Insert formatted table |
+| `UpdateTableCell(table, row, col, value)` | Modify existing cell |
+| `MergeTableCellsHorizontal(table, row, startCol, endCol)` | Merge cells across columns |
+| `MergeTableCellsVertical(table, startRow, endRow, col)` | Merge cells across rows |
+
+### Chart Operations
+| Method | Description |
+|--------|-------------|
+| `InsertChart(opts ChartOptions)` | Create new chart |
+| `UpdateChart(index, data)` | Update existing chart data |
+| `GetChartCount()` | Count charts in document |
+| `GetChartData(chartIndex)` | Read chart categories and series |
+
+### Table of Contents
+| Method | Description |
+|--------|-------------|
+| `InsertTOC(opts TOCOptions)` | Insert TOC field |
+| `UpdateTOC()` | Mark TOC for recalculation on open |
+| `GetTOCEntries()` | Parse existing TOC entries |
+
+### Styles
+| Method | Description |
+|--------|-------------|
+| `AddStyle(def StyleDefinition)` | Add single custom style |
+| `AddStyles(defs []StyleDefinition)` | Add multiple custom styles |
+
+### Comments
+| Method | Description |
+|--------|-------------|
+| `InsertComment(opts CommentOptions)` | Add comment at anchor text |
+| `GetComments()` | Read all document comments |
+
+### Track Changes
+| Method | Description |
+|--------|-------------|
+| `InsertTrackedText(opts TrackedInsertOptions)` | Insert text with revision tracking |
+| `DeleteTrackedText(opts TrackedDeleteOptions)` | Mark text as tracked deletion |
+
+### Footnotes & Endnotes
+| Method | Description |
+|--------|-------------|
+| `InsertFootnote(opts FootnoteOptions)` | Add footnote at anchor text |
+| `InsertEndnote(opts EndnoteOptions)` | Add endnote at anchor text |
 
 ### Image Operations
-- `InsertImage(options ImageOptions)` - Insert image with proportional sizing
+| Method | Description |
+|--------|-------------|
+| `InsertImage(opts ImageOptions)` | Insert image with proportional sizing |
+
+### Hyperlink & Bookmark Operations
+| Method | Description |
+|--------|-------------|
+| `InsertHyperlink(text, url, opts)` | Insert external hyperlink |
+| `InsertInternalLink(text, bookmark, opts)` | Insert internal link |
+| `CreateBookmark(name, opts)` | Create empty bookmark |
+| `CreateBookmarkWithText(name, text, opts)` | Create bookmark with content |
+| `WrapTextInBookmark(name, anchorText)` | Wrap existing text in bookmark |
 
 ### Text Operations
-- `ReplaceText(old, new string, options ReplaceOptions)` - Replace all text occurrences
-- `ReplaceTextRegex(pattern *regexp.Regexp, replacement string, options ReplaceOptions)` - Replace using regex
-- `GetText()` - Extract all text from document
-- `GetParagraphText()` - Extract text from all paragraphs
-- `GetTableText()` - Extract text from all tables
-- `FindText(pattern string, options FindOptions)` - Find all occurrences with context
+| Method | Description |
+|--------|-------------|
+| `ReplaceText(old, new, opts)` | Replace text occurrences |
+| `ReplaceTextRegex(pattern, replacement, opts)` | Replace using regex |
+| `GetText()` | Extract all document text |
+| `GetParagraphText()` | Extract text by paragraphs |
+| `GetTableText()` | Extract text from tables |
+| `FindText(pattern, opts)` | Find text with context |
 
-### Hyperlink Operations
-- `InsertHyperlink(text, url string, options HyperlinkOptions)` - Insert external hyperlink
-- `InsertInternalLink(text, bookmarkName string, options HyperlinkOptions)` - Insert internal link
+### Delete Operations
+| Method | Description |
+|--------|-------------|
+| `DeleteParagraphs(text, opts)` | Delete paragraphs matching text |
+| `DeleteTable(index)` | Delete table by index |
+| `DeleteImage(index)` | Delete image by index |
+| `DeleteChart(index)` | Delete chart by index |
 
-### Bookmark Operations
-- `CreateBookmark(name string, options BookmarkOptions)` - Create empty bookmark marker
-- `CreateBookmarkWithText(name, text string, options BookmarkOptions)` - Create bookmark with text content
-- `WrapTextInBookmark(name, anchorText string)` - Wrap existing text in bookmark
+### Count Operations
+| Method | Description |
+|--------|-------------|
+| `GetTableCount()` | Count tables in document |
+| `GetParagraphCount()` | Count paragraphs |
+| `GetImageCount()` | Count images |
+| `GetChartCount()` | Count charts |
+
+### Page Layout & Formatting
+| Method | Description |
+|--------|-------------|
+| `SetPageNumber(opts PageNumberOptions)` | Set page number start and format |
+| `SetTextWatermark(opts WatermarkOptions)` | Add text watermark |
+| `SetPageLayout(opts PageLayoutOptions)` | Set page size and orientation |
+| `InsertPageBreak(opts BreakOptions)` | Insert page break |
+| `InsertSectionBreak(opts BreakOptions)` | Insert section break |
 
 ### Header & Footer Operations
-- `SetHeader(content HeaderFooterContent, options HeaderOptions)` - Create/update header
-- `SetFooter(content HeaderFooterContent, options FooterOptions)` - Create/update footer
+| Method | Description |
+|--------|-------------|
+| `SetHeader(content, opts)` | Create/update header |
+| `SetFooter(content, opts)` | Create/update footer |
 
 ### Properties Operations
-- `SetCoreProperties(props CoreProperties)` - Set core document properties (Title, Author, etc.)
-- `GetCoreProperties()` - Retrieve core document properties
-- `SetAppProperties(props AppProperties)` - Set application properties (Company, Manager, etc.)
-- `SetCustomProperties(properties []CustomProperty)` - Set custom properties with various types
-
-### Break Operations
-- `InsertPageBreak(options BreakOptions)` - Insert page break
-- `InsertSectionBreak(options BreakOptions)` - Insert section break
+| Method | Description |
+|--------|-------------|
+| `SetCoreProperties(props)` | Set core metadata (Title, Author, etc.) |
+| `GetCoreProperties()` | Read core metadata |
+| `SetAppProperties(props)` | Set app metadata (Company, etc.) |
+| `SetCustomProperties(properties)` | Set custom key-value metadata |
 
 ### Caption Operations
-- `AddCaption(options CaptionOptions)` - Insert auto-numbered caption
-
-### Core Operations
-- `New(filepath string) (*Updater, error)` - Open DOCX file
-- `Save(outputPath string) error` - Save modified document
-- `Cleanup()` - Clean up temporary files
+| Method | Description |
+|--------|-------------|
+| `AddCaption(opts CaptionOptions)` | Insert auto-numbered caption |
 
 ## Project Structure
 
 ```
 .
-├── *.go                   # Core library (root level)
-│   ├── chart_updater.go   # Main API
-│   ├── chart.go           # Chart insertion
-│   ├── chart_xml.go       # XML manipulation
-│   ├── excel_handler.go   # Workbook updates
-│   ├── table.go           # Table insertion
-│   ├── paragraph.go       # Text insertion
-│   ├── image.go           # Image insertion
-│   ├── bookmark.go        # Bookmark management
-│   ├── breaks.go          # Page and section breaks
-│   ├── caption.go         # Caption generation
-│   └── ...
-├── *_test.go              # Unit tests (root level)
-├── examples/              # Example programs
-├── templates/             # Sample templates
-└── LICENSE                # MIT License
+├── chart_updater.go     # Main Updater API, New/Save/io.Reader/io.Writer
+├── chart.go             # Chart insertion (column, bar, line, pie, area, scatter)
+├── chart_xml.go         # XML manipulation for charts
+├── chart_read.go        # Read existing chart data
+├── chart_extended.go    # Extended chart types and options
+├── excel_handler.go     # Embedded workbook updates
+├── table.go             # Table insertion with styles
+├── table_update.go      # Update existing table cells
+├── merge.go             # Table cell merging (horizontal/vertical)
+├── paragraph.go         # Paragraph and text insertion
+├── image.go             # Image insertion with proportional sizing
+├── toc.go               # Table of Contents generation
+├── styles.go            # Custom style definitions
+├── watermark.go         # Text watermarks via VML
+├── pagenumber.go        # Page number control
+├── footnote.go          # Footnotes and endnotes
+├── comment.go           # Document comments
+├── trackchanges.go      # Revision tracking (insertions/deletions)
+├── delete.go            # Delete operations and count queries
+├── bookmark.go          # Bookmark management
+├── hyperlink.go         # Hyperlinks (external and internal)
+├── headerfooter.go      # Headers and footers
+├── breaks.go            # Page and section breaks
+├── caption.go           # Auto-numbered captions
+├── list.go              # Bullet and numbered lists
+├── read.go              # Text extraction and search
+├── replace.go           # Find and replace operations
+├── properties.go        # Document properties
+├── helpers.go           # Shared utility functions
+├── utils.go             # ZIP and file utilities
+├── types.go             # Shared type definitions
+├── constants.go         # Constants and enums
+├── errors.go            # Structured error types
+├── doc.go               # Package-level documentation
+├── *_test.go            # Unit and golden file tests
+├── examples/            # Example programs
+└── LICENSE              # MIT License
 ```
 
 ## Examples
 
 Check the `/examples` directory for complete working examples:
 
-- `example_bookmarks.go` - Bookmark creation and internal navigation
+- `example_all_features.go` - **Comprehensive demo** of every feature
+- `example_toc_watermark.go` - TOC, watermarks, page numbers, styles, footnotes
 - `example_chart_insert.go` - Creating charts from scratch
+- `example_extended_chart.go` - Extended chart options
+- `example_bookmarks.go` - Bookmark creation and internal navigation
 - `example_table.go` - Table creation with styling
+- `example_table_widths.go` - Table column width control
+- `example_table_row_heights.go` - Table row height control
+- `example_table_named_styles.go` - Named table styles
+- `example_table_orientation.go` - Table with page orientation
 - `example_paragraph.go` - Text and heading insertion
 - `example_image.go` - Image insertion with proportional sizing
 - `example_breaks.go` - Page and section breaks
 - `example_captions.go` - Auto-numbered captions
+- `example_lists.go` - Bullet and numbered lists
+- `example_page_layout.go` - Page layout configuration
+- `example_properties.go` - Document properties
 - `example_multi_subsystem.go` - Combined operations
 - `example_with_template.go` - Template-based generation
+- `example_conditional_cell_colors.go` - Conditional cell formatting
 
 Run any example:
 ```bash
-go run examples/example_table.go
+go run examples/example_all_features.go template.docx output.docx
 ```
 
 ## Testing
-
-Run the comprehensive test suite:
 
 ```bash
 # Run all tests
 go test ./...
 
-# Run specific test
-go test -run TestInsertTable ./...
-
 # Run with verbose output
 go test -v ./...
 
+# Run specific test
+go test -run TestInsertTable ./...
+
 # Generate coverage report
 go test -cover ./...
+
+# Run golden file tests only
+go test -run TestGolden ./...
 ```
+
+The test suite includes:
+- Unit tests for all public and internal functions
+- Golden file tests that verify XML output against expected strings
+- Validation tests for error handling and edge cases
 
 ## Requirements
 
@@ -839,23 +909,32 @@ go test -cover ./...
 
 DOCX files are ZIP archives containing XML files. This library:
 1. Extracts the DOCX archive to a temporary directory
-2. Parses and modifies XML files using Go's `encoding/xml`
-3. Updates relationships (`_rels/*.rels`) and content types
+2. Parses and modifies XML files using Go's `encoding/xml` and string manipulation
+3. Updates relationships (`_rels/*.rels`) and content types (`[Content_Types].xml`)
 4. Manages embedded Excel workbooks for chart data
 5. Re-packages everything into a new DOCX file
 
-## Limitations
-
-- Supports bar, column, line, pie, area, and scatter chart types
-- Table styles are limited to predefined Word styles
-- Performance depends on document size and complexity
-
 ## Roadmap
 
-- [x] Image insertion support with proportional sizing
+- [x] Chart updates and insertion (column, bar, line, pie, area, scatter)
+- [x] Table insertion with cell merging
+- [x] Paragraph and text insertion with formatting
+- [x] Image insertion with proportional sizing
 - [x] Header/footer manipulation
-- [ ] Style customization API
+- [x] Table of Contents generation
+- [x] Custom styles API
+- [x] Watermarks
+- [x] Page number control
+- [x] Footnotes and endnotes
+- [x] Comments
+- [x] Track changes (insertions and deletions)
+- [x] Delete operations
+- [x] `io.Reader`/`io.Writer` support
+- [x] Golden file tests
+- [ ] Content controls (structured document tags)
+- [ ] Digital signatures
 - [ ] Performance optimizations for large documents
+- [ ] `context.Context` support for cancellation/timeouts
 
 ## Contributing
 

@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,8 +12,9 @@ import (
 
 // Updater manages a DOCX document for programmatic reading and writing.
 type Updater struct {
-	originalPath string
-	tempDir      string
+	originalPath  string
+	tempDir       string
+	tempInputFile string
 
 	bulletListNumID   int
 	numberedListNumID int
@@ -84,7 +86,15 @@ func (u *Updater) Cleanup() error {
 	if u == nil || u.tempDir == "" {
 		return nil
 	}
-	return os.RemoveAll(u.tempDir)
+	err := os.RemoveAll(u.tempDir)
+	if u.tempInputFile != "" {
+		if rmErr := os.Remove(u.tempInputFile); rmErr != nil && !os.IsNotExist(rmErr) {
+			if err == nil {
+				err = rmErr
+			}
+		}
+	}
+	return err
 }
 
 // UpdateChart updates one chart by index (1-based).
@@ -117,6 +127,50 @@ func (u *Updater) UpdateChart(chartIndex int, data ChartData) error {
 	}
 
 	return nil
+}
+
+// NewFromReader opens a DOCX from an io.Reader and prepares it for editing.
+// The reader content is buffered to a temporary file which is cleaned up by Cleanup().
+func NewFromReader(r io.Reader) (*Updater, error) {
+	if r == nil {
+		return nil, errors.New("reader is nil")
+	}
+
+	tmpFile, err := os.CreateTemp("", "docx-input-*.docx")
+	if err != nil {
+		return nil, fmt.Errorf("create temp input file: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+
+	if _, err := io.Copy(tmpFile, r); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
+		return nil, fmt.Errorf("buffer reader to temp file: %w", err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		os.Remove(tmpPath)
+		return nil, fmt.Errorf("close temp input file: %w", err)
+	}
+
+	u, err := New(tmpPath)
+	if err != nil {
+		os.Remove(tmpPath)
+		return nil, err
+	}
+
+	u.tempInputFile = tmpPath
+	return u, nil
+}
+
+// SaveToWriter writes the updated DOCX to an io.Writer.
+func (u *Updater) SaveToWriter(w io.Writer) error {
+	if u == nil {
+		return errors.New("updater is nil")
+	}
+	if w == nil {
+		return errors.New("writer is nil")
+	}
+	return writeZipFromDir(u.tempDir, w)
 }
 
 // Save writes the updated DOCX to outputPath.

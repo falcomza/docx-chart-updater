@@ -76,7 +76,21 @@ func createZipFromDir(sourceDir, outZipPath string) error {
 		return fmt.Errorf("create output zip: %w", err)
 	}
 
-	zw := zip.NewWriter(out)
+	if err := writeZipFromDir(sourceDir, out); err != nil {
+		out.Close()
+		return err
+	}
+
+	if err := out.Close(); err != nil {
+		return fmt.Errorf("close output zip: %w", err)
+	}
+
+	return nil
+}
+
+// writeZipFromDir writes a zip archive of sourceDir to the given writer.
+func writeZipFromDir(sourceDir string, w io.Writer) error {
+	zw := zip.NewWriter(w)
 
 	walkErr := filepath.WalkDir(sourceDir, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -92,7 +106,7 @@ func createZipFromDir(sourceDir, outZipPath string) error {
 		}
 
 		zipPath := filepath.ToSlash(rel)
-		w, err := zw.Create(zipPath)
+		ew, err := zw.Create(zipPath)
 		if err != nil {
 			return fmt.Errorf("create zip entry %s: %w", zipPath, err)
 		}
@@ -102,7 +116,7 @@ func createZipFromDir(sourceDir, outZipPath string) error {
 			return fmt.Errorf("open source file %s: %w", path, err)
 		}
 
-		if _, err := io.Copy(w, f); err != nil {
+		if _, err := io.Copy(ew, f); err != nil {
 			f.Close()
 			return fmt.Errorf("write zip entry %s: %w", zipPath, err)
 		}
@@ -115,17 +129,11 @@ func createZipFromDir(sourceDir, outZipPath string) error {
 	})
 	if walkErr != nil {
 		zw.Close()
-		out.Close()
 		return walkErr
 	}
 
 	if err := zw.Close(); err != nil {
-		out.Close()
 		return fmt.Errorf("close zip writer: %w", err)
-	}
-
-	if err := out.Close(); err != nil {
-		return fmt.Errorf("close output zip: %w", err)
 	}
 
 	return nil
