@@ -44,9 +44,11 @@ A powerful Go library for programmatically manipulating Microsoft Word (DOCX) do
 - **Delete Operations**: Remove paragraphs, tables, images, and charts by index
 - **Update Operations**: Modify existing table cells
 - **Count Operations**: Get counts of paragraphs, tables, images, and charts
-- **Document Properties**: Set core, app, and custom metadata
+- **Document Properties**: Full CRUD for core, app, and custom metadata (title, author, status, template, statistics, custom key-value pairs)
 
 🛠️ **Advanced**
+- **Blank Document Creation**: Create documents from scratch with `NewBlank()` — no template file needed
+- **Template Upload**: Load templates from raw bytes with `NewFromBytes()` — ideal for web uploads and API payloads
 - **`io.Reader`/`io.Writer` support**: In-memory document manipulation without disk I/O
 - XML-based chart parsing using Go's `encoding/xml`
 - Automatic Excel formula range adjustment
@@ -71,8 +73,11 @@ import (
 )
 
 func main() {
-    // Open existing DOCX
-    u, err := godocx.New("template.docx")
+    // Choose one constructor:
+    u, err := godocx.New("template.docx")       // From existing file
+    // u, err := godocx.NewBlank()               // From scratch (no template)
+    // u, err := godocx.NewFromBytes(data)       // From raw bytes (upload/API)
+    // u, err := godocx.NewFromReader(reader)    // From io.Reader
     if err != nil {
         log.Fatal(err)
     }
@@ -621,25 +626,82 @@ for _, m := range matches {
 }
 ```
 
-### Document Properties
+### Creating Documents from Scratch
+
+Create a blank document without any template file:
 
 ```go
-u, _ := godocx.New("template.docx")
+u, _ := godocx.NewBlank()
 defer u.Cleanup()
 
+u.AddHeading(1, "Report Title", godocx.PositionEnd)
+u.AddText("Created entirely from scratch.", godocx.PositionEnd)
+u.Save("from_scratch.docx")
+```
+
+Load a template from raw bytes (e.g., HTTP upload or database):
+
+```go
+data, _ := io.ReadAll(uploadedFile)
+u, _ := godocx.NewFromBytes(data)
+defer u.Cleanup()
+
+u.AddText("Added to uploaded template.", godocx.PositionEnd)
+u.Save("from_upload.docx")
+```
+
+### Document Properties
+
+Set and read core, application, and custom properties — matching Word's File → Info → Properties dialog:
+
+```go
+u, _ := godocx.NewBlank()
+defer u.Cleanup()
+
+// Core properties (Summary tab)
 u.SetCoreProperties(godocx.CoreProperties{
-    Title:   "Q4 Report",
-    Creator: "Finance Dept",
+    Title:         "Q4 Report",
+    Creator:       "Finance Dept",
+    Subject:       "Quarterly Financials",
+    Keywords:      "finance, quarterly, report",
+    ContentStatus: "Draft", // "Draft", "Final", "Reviewed", etc.
 })
 
+// Application properties (Statistics tab + template assignment)
 u.SetAppProperties(godocx.AppProperties{
-    Company: "ACME Corp",
+    Company:              "ACME Corp",
+    Manager:              "Jane Smith",
+    Template:             "Corporate_Report.dotm",
+    HyperlinkBase:        "https://docs.acme.com",
+    Pages:                25,
+    Words:                7500,
+    Characters:           42000,
+    CharactersWithSpaces: 49500,
+    Lines:                350,
+    Paragraphs:           80,
+    TotalTime:            120,
 })
 
+// Custom properties (Custom tab) — typed values
 u.SetCustomProperties([]godocx.CustomProperty{
     {Name: "Department", Value: "Engineering"},
-    {Name: "Version", Value: "2.1.0"},
+    {Name: "ProjectCode", Value: "PRJ-2026"},
+    {Name: "Budget", Value: 150000.50},
+    {Name: "Approved", Value: true},
+    {Name: "Deadline", Value: time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC)},
 })
+
+// Read properties back
+coreProps, _ := u.GetCoreProperties()
+fmt.Println(coreProps.Title, coreProps.ContentStatus)
+
+appProps, _ := u.GetAppProperties()
+fmt.Println(appProps.Company, appProps.Template, appProps.Pages)
+
+customProps, _ := u.GetCustomProperties()
+for _, p := range customProps {
+    fmt.Printf("%s = %v\n", p.Name, p.Value)
+}
 
 u.Save("with_properties.docx")
 ```
@@ -671,6 +733,8 @@ u.Save("with_lists.docx")
 | Method | Description |
 |--------|-------------|
 | `New(filepath string)` | Open DOCX file from disk |
+| `NewBlank()` | Create blank document from scratch (no template needed) |
+| `NewFromBytes(data []byte)` | Create from raw bytes (upload/API/database) |
 | `NewFromReader(r io.Reader)` | Open DOCX from any `io.Reader` |
 | `Save(outputPath string)` | Save document to disk |
 | `SaveToWriter(w io.Writer)` | Save document to any `io.Writer` |
@@ -793,10 +857,12 @@ u.Save("with_lists.docx")
 ### Properties Operations
 | Method | Description |
 |--------|-------------|
-| `SetCoreProperties(props)` | Set core metadata (Title, Author, etc.) |
+| `SetCoreProperties(props)` | Set core metadata (Title, Author, ContentStatus, etc.) |
 | `GetCoreProperties()` | Read core metadata |
-| `SetAppProperties(props)` | Set app metadata (Company, etc.) |
+| `SetAppProperties(props)` | Set app metadata (Company, Template, statistics, etc.) |
+| `GetAppProperties()` | Read app metadata |
 | `SetCustomProperties(properties)` | Set custom key-value metadata |
+| `GetCustomProperties()` | Read custom key-value metadata with preserved types |
 
 ### Caption Operations
 | Method | Description |
@@ -867,6 +933,7 @@ Check the `/examples` directory for complete working examples:
 - `example_lists.go` - Bullet and numbered lists
 - `example_page_layout.go` - Page layout configuration
 - `example_properties.go` - Document properties
+- `example_blank_and_properties.go` - Blank document creation and full properties CRUD
 - `example_multi_subsystem.go` - Combined operations
 - `example_with_template.go` - Template-based generation
 - `example_conditional_cell_colors.go` - Conditional cell formatting
@@ -930,6 +997,9 @@ DOCX files are ZIP archives containing XML files. This library:
 - [x] Track changes (insertions and deletions)
 - [x] Delete operations
 - [x] `io.Reader`/`io.Writer` support
+- [x] Blank document creation (`NewBlank`, `NewFromBytes`)
+- [x] Full properties CRUD (core, app, custom — get and set)
+- [x] Expanded app properties (template, statistics, hyperlink base)
 - [x] Golden file tests
 - [ ] Content controls (structured document tags)
 - [ ] Digital signatures

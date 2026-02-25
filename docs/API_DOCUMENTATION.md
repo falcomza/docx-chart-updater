@@ -39,7 +39,7 @@ The DOCX Chart Updater is a Go library for programmatically manipulating Microso
 
 | Category | Methods |
 |----------|---------|
-| **Lifecycle** | `New()`, `Save()`, `Cleanup()`, `TempDir()` |
+| **Lifecycle** | `New()`, `NewBlank()`, `NewFromBytes()`, `NewFromReader()`, `Save()`, `SaveToWriter()`, `Cleanup()`, `TempDir()` |
 | **Charts** | `UpdateChart()`, `InsertChart()` |
 | **Tables** | `InsertTable()` |
 | **Images** | `InsertImage()` |
@@ -49,7 +49,7 @@ The DOCX Chart Updater is a Go library for programmatically manipulating Microso
 | **Breaks** | `InsertPageBreak()`, `InsertSectionBreak()` |
 | **Hyperlinks** | `InsertHyperlink()`, `InsertInternalLink()` |
 | **Headers/Footers** | `SetHeader()`, `SetFooter()` |
-| **Properties** | `SetCoreProperties()`, `SetAppProperties()`, `SetCustomProperties()`, `GetCoreProperties()` |
+| **Properties** | `SetCoreProperties()`, `GetCoreProperties()`, `SetAppProperties()`, `GetAppProperties()`, `SetCustomProperties()`, `GetCustomProperties()` |
 | **Bookmarks** | `CreateBookmark()`, `CreateBookmarkWithText()` |
 | **Track Changes** | `InsertTrackedText()`, `DeleteTrackedText()` |
 | **Deletion** | `DeleteParagraphs()`, `DeleteTable()`, `DeleteImage()`, `DeleteChart()` |
@@ -137,8 +137,11 @@ func main() {
 ### Updater Lifecycle
 
 ```go
-// 1. Create - Opens DOCX, extracts to temp directory
-updater, err := godocx.New("input.docx")
+// 1. Create - Choose one constructor:
+updater, err := godocx.New("input.docx")       // From file
+// updater, err := godocx.NewBlank()             // From scratch
+// updater, err := godocx.NewFromBytes(data)     // From bytes (upload/API)
+// updater, err := godocx.NewFromReader(reader)  // From io.Reader
 
 // 2. Modify - Perform operations on the document
 updater.UpdateChart(1, data)
@@ -179,7 +182,7 @@ The library resolves these relationships automatically—no manual path handling
 
 ## API Reference
 
-### Constructor
+### Constructors
 
 #### `New(docxPath string) (*Updater, error)`
 
@@ -197,6 +200,72 @@ Creates a new updater by extracting the DOCX to a temporary directory.
 updater, err := godocx.New("./templates/report.docx")
 if err != nil {
     return fmt.Errorf("failed to open document: %w", err)
+}
+defer updater.Cleanup()
+```
+
+#### `NewBlank() (*Updater, error)`
+
+Creates a new blank DOCX document from scratch without requiring a template file. The document contains a minimal valid OpenXML structure with `[Content_Types].xml`, `_rels/.rels`, `word/document.xml`, `docProps/core.xml`, and `docProps/app.xml`.
+
+**Returns:**
+- `*Updater`: Updater instance for document manipulation
+- `error`: Structure creation failed
+
+**Example:**
+```go
+updater, err := godocx.NewBlank()
+if err != nil {
+    return fmt.Errorf("failed to create blank document: %w", err)
+}
+defer updater.Cleanup()
+
+updater.InsertParagraph(godocx.ParagraphOptions{
+    Text:     "Created from scratch!",
+    Position: godocx.PositionEnd,
+})
+updater.Save("output.docx")
+```
+
+#### `NewFromBytes(data []byte) (*Updater, error)`
+
+Creates an Updater from raw DOCX bytes. Ideal for web uploads, API payloads, or database-stored templates.
+
+**Parameters:**
+- `data`: Raw DOCX file bytes (must be non-empty)
+
+**Returns:**
+- `*Updater`: Updater instance for document manipulation
+- `error`: Empty data or invalid DOCX
+
+**Example:**
+```go
+// From HTTP upload body
+data, _ := io.ReadAll(request.Body)
+updater, err := godocx.NewFromBytes(data)
+if err != nil {
+    return fmt.Errorf("invalid template: %w", err)
+}
+defer updater.Cleanup()
+```
+
+#### `NewFromReader(r io.Reader) (*Updater, error)`
+
+Creates an Updater from an `io.Reader`. The content is buffered to a temporary file.
+
+**Parameters:**
+- `r`: Reader providing DOCX content
+
+**Returns:**
+- `*Updater`: Updater instance
+- `error`: Nil reader, read failure, or invalid DOCX
+
+**Example:**
+```go
+file, _ := os.Open("template.docx")
+updater, err := godocx.NewFromReader(file)
+if err != nil {
+    return err
 }
 defer updater.Cleanup()
 ```
@@ -606,6 +675,7 @@ type CoreProperties struct {
     Keywords       string    // Keywords (comma-separated)
     Description    string    // Description/comments
     Category       string    // Document category
+    ContentStatus  string    // Document status (e.g., "Draft", "Final", "Reviewed")
     Created        time.Time // Creation date
     Modified       time.Time // Modification date
     LastModifiedBy string    // Last modifier name
@@ -616,36 +686,56 @@ type CoreProperties struct {
 **Example:**
 ```go
 updater.SetCoreProperties(godocx.CoreProperties{
-    Title:       "Quarterly Financial Report",
-    Subject:     "Q4 2024 Financials",
-    Creator:     "John Doe",
-    Keywords:    "finance, quarterly, report",
-    Description: "Financial performance metrics for Q4 2024",
-    Category:    "Reports",
+    Title:         "Quarterly Financial Report",
+    Subject:       "Q4 2024 Financials",
+    Creator:       "John Doe",
+    Keywords:      "finance, quarterly, report",
+    Description:   "Financial performance metrics for Q4 2024",
+    Category:      "Reports",
+    ContentStatus: "Final",
 })
 ```
 
 #### `SetAppProperties(props AppProperties) error`
 
-Sets application-specific document properties.
+Sets application-specific document properties including template assignment and document statistics.
 
 **Properties:**
 ```go
 type AppProperties struct {
-    Company     string // Company name
-    Manager     string // Manager name
-    Application string // Application name (typically Microsoft Word)
-    AppVersion  string // Application version
+    Company              string // Company name
+    Manager              string // Manager name
+    Application          string // Application name (typically Microsoft Word)
+    AppVersion           string // Application version
+    Template             string // Template name (e.g., "Normal.dotm")
+    HyperlinkBase        string // Base URL for relative hyperlinks
+    TotalTime            int    // Total editing time in minutes
+    Pages                int    // Page count
+    Words                int    // Word count
+    Characters           int    // Character count (without spaces)
+    CharactersWithSpaces int    // Character count including spaces
+    Lines                int    // Line count
+    Paragraphs           int    // Paragraph count
+    DocSecurity          int    // Security level (0=none, 1=password, 4=read-only)
 }
 ```
 
 **Example:**
 ```go
 updater.SetAppProperties(godocx.AppProperties{
-    Company:     "Acme Corporation",
-    Manager:     "Jane Smith",
-    Application: "Microsoft Word",
-    AppVersion:  "16.0000",
+    Company:              "Acme Corporation",
+    Manager:              "Jane Smith",
+    Application:          "Microsoft Word",
+    AppVersion:           "16.0000",
+    Template:             "Corporate_Report.dotm",
+    HyperlinkBase:        "https://docs.acme.com",
+    TotalTime:            120,
+    Pages:                25,
+    Words:                7500,
+    Characters:           42000,
+    CharactersWithSpaces: 49500,
+    Lines:                350,
+    Paragraphs:           80,
 })
 ```
 
@@ -693,8 +783,54 @@ props, err := updater.GetCoreProperties()
 if err != nil {
     return err
 }
-fmt.Printf("Document Title: %s\n", props.Title)
+fmt.Printf("Title: %s\n", props.Title)
 fmt.Printf("Author: %s\n", props.Creator)
+fmt.Printf("Status: %s\n", props.ContentStatus)
+```
+
+#### `GetAppProperties() (*AppProperties, error)`
+
+Retrieves application-specific document properties including template name and document statistics.
+
+**Returns:**
+- `*AppProperties`: Current app properties
+- `error`: Parse error or file not found
+
+**Example:**
+```go
+props, err := updater.GetAppProperties()
+if err != nil {
+    return err
+}
+fmt.Printf("Company: %s\n", props.Company)
+fmt.Printf("Template: %s\n", props.Template)
+fmt.Printf("Pages: %d, Words: %d\n", props.Pages, props.Words)
+```
+
+#### `GetCustomProperties() ([]CustomProperty, error)`
+
+Retrieves custom document properties with preserved type information. Returns `nil, nil` if no custom properties have been set.
+
+**Returns:**
+- `[]CustomProperty`: Custom properties with typed values
+- `error`: Parse error
+
+**Returned value types:**
+- `string` — from `vt:lpwstr`
+- `int` — from `vt:i4`
+- `float64` — from `vt:r8`
+- `bool` — from `vt:bool`
+- `time.Time` — from `vt:filetime`
+
+**Example:**
+```go
+props, err := updater.GetCustomProperties()
+if err != nil {
+    return err
+}
+for _, p := range props {
+    fmt.Printf("%s = %v (%T)\n", p.Name, p.Value, p.Value)
+}
 ```
 
 ### Bookmark Operations

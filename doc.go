@@ -27,6 +27,14 @@
 // Call [Updater.Cleanup] (typically via defer) to remove the temporary
 // directory when done.
 //
+// # Creating Documents
+//
+// There are four ways to create or open a document:
+//   - [New] — opens an existing DOCX file from disk
+//   - [NewBlank] — creates a new empty document from scratch (no template needed)
+//   - [NewFromBytes] — creates a document from raw bytes (e.g., uploaded template data)
+//   - [NewFromReader] — creates a document from an [io.Reader]
+//
 // # Inserting Content
 //
 // All Insert* and Add* methods accept an [InsertPosition]:
@@ -34,6 +42,16 @@
 //   - [PositionBeginning] — prepends to the document body
 //   - [PositionAfterText] — inserts after the paragraph containing Anchor text
 //   - [PositionBeforeText] — inserts before the paragraph containing Anchor text
+//
+// # Document Properties
+//
+// Properties correspond to the Info panel and Advanced Properties dialog in Microsoft Word.
+//
+//   - [Updater.SetCoreProperties] / [Updater.GetCoreProperties] — title, author, keywords, status, dates
+//   - [Updater.SetAppProperties] / [Updater.GetAppProperties] — company, manager, template, statistics
+//   - [Updater.SetCustomProperties] / [Updater.GetCustomProperties] — user-defined name/value pairs
+//
+// The [AppProperties.Template] field assigns a template name (e.g., "Normal.dotm").
 //
 // # Chart Workflow
 //

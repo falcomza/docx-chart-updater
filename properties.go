@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -28,6 +29,9 @@ type CoreProperties struct {
 
 	// Category of the document
 	Category string
+
+	// ContentStatus indicates the document status (e.g., "Draft", "Final", "Reviewed")
+	ContentStatus string
 
 	// Created date (if empty, uses current time)
 	Created time.Time
@@ -55,6 +59,37 @@ type AppProperties struct {
 
 	// AppVersion (e.g., "16.0000")
 	AppVersion string
+
+	// Template name (e.g., "Normal.dotm")
+	Template string
+
+	// HyperlinkBase is the base URL for relative hyperlinks in the document
+	HyperlinkBase string
+
+	// TotalTime is the total editing time in minutes
+	TotalTime int
+
+	// Pages is the page count
+	Pages int
+
+	// Words is the word count
+	Words int
+
+	// Characters is the character count (without spaces)
+	Characters int
+
+	// CharactersWithSpaces is the character count including spaces
+	CharactersWithSpaces int
+
+	// Lines is the line count
+	Lines int
+
+	// Paragraphs is the paragraph count
+	Paragraphs int
+
+	// DocSecurity defines the document security level (0=none, 1=password protected,
+	// 2=read-only recommended, 4=read-only enforced, 8=locked for annotations)
+	DocSecurity int
 }
 
 // CustomProperty represents a custom document property
@@ -95,6 +130,7 @@ func (u *Updater) SetCoreProperties(props CoreProperties) error {
 	content = u.updateCoreProperty(content, "cp:category", props.Category)
 	content = u.updateCoreProperty(content, "cp:lastModifiedBy", props.LastModifiedBy)
 	content = u.updateCoreProperty(content, "cp:revision", props.Revision)
+	content = u.updateCoreProperty(content, "cp:contentStatus", props.ContentStatus)
 
 	// Update dates with proper attributes
 	if !props.Created.IsZero() {
@@ -135,7 +171,7 @@ func (u *Updater) SetAppProperties(props AppProperties) error {
 		content = u.generateDefaultAppXML()
 	}
 
-	// Update properties
+	// Update string properties
 	if props.Company != "" {
 		content = u.updateAppProperty(content, "Company", props.Company)
 	}
@@ -147,6 +183,38 @@ func (u *Updater) SetAppProperties(props AppProperties) error {
 	}
 	if props.AppVersion != "" {
 		content = u.updateAppProperty(content, "AppVersion", props.AppVersion)
+	}
+	if props.Template != "" {
+		content = u.updateAppProperty(content, "Template", props.Template)
+	}
+	if props.HyperlinkBase != "" {
+		content = u.updateAppProperty(content, "HyperlinkBase", props.HyperlinkBase)
+	}
+
+	// Update integer properties (only when > 0)
+	if props.TotalTime > 0 {
+		content = u.updateAppProperty(content, "TotalTime", strconv.Itoa(props.TotalTime))
+	}
+	if props.Pages > 0 {
+		content = u.updateAppProperty(content, "Pages", strconv.Itoa(props.Pages))
+	}
+	if props.Words > 0 {
+		content = u.updateAppProperty(content, "Words", strconv.Itoa(props.Words))
+	}
+	if props.Characters > 0 {
+		content = u.updateAppProperty(content, "Characters", strconv.Itoa(props.Characters))
+	}
+	if props.CharactersWithSpaces > 0 {
+		content = u.updateAppProperty(content, "CharactersWithSpaces", strconv.Itoa(props.CharactersWithSpaces))
+	}
+	if props.Lines > 0 {
+		content = u.updateAppProperty(content, "Lines", strconv.Itoa(props.Lines))
+	}
+	if props.Paragraphs > 0 {
+		content = u.updateAppProperty(content, "Paragraphs", strconv.Itoa(props.Paragraphs))
+	}
+	if props.DocSecurity > 0 {
+		content = u.updateAppProperty(content, "DocSecurity", strconv.Itoa(props.DocSecurity))
 	}
 
 	// Write updated app.xml
@@ -230,6 +298,7 @@ func (u *Updater) GetCoreProperties() (*CoreProperties, error) {
 	props.Category = u.extractCoreProperty(content, "cp:category")
 	props.LastModifiedBy = u.extractCoreProperty(content, "cp:lastModifiedBy")
 	props.Revision = u.extractCoreProperty(content, "cp:revision")
+	props.ContentStatus = u.extractCoreProperty(content, "cp:contentStatus")
 
 	// Parse dates
 	if created := u.extractCoreProperty(content, "dcterms:created"); created != "" {
@@ -306,8 +375,9 @@ func (u *Updater) updateCoreDateProperty(content, property, value string) string
 
 // updateAppProperty updates or adds an app property in the XML
 func (u *Updater) updateAppProperty(content, property, value string) string {
-	// Check if property exists
-	pattern := fmt.Sprintf(`<%s[^>]*>.*?</%s>`, regexp.QuoteMeta(property), regexp.QuoteMeta(property))
+	// Check if property exists (use (?:\s[^>]*)? to avoid matching tags that share a prefix,
+	// e.g. Characters vs CharactersWithSpaces)
+	pattern := fmt.Sprintf(`<%s(?:\s[^>]*)?>.*?</%s>`, regexp.QuoteMeta(property), regexp.QuoteMeta(property))
 	re := regexp.MustCompile(pattern)
 
 	if value == "" {
@@ -498,6 +568,158 @@ func (u *Updater) addCustomPropertiesRelationship() error {
 	}
 
 	return nil
+}
+
+// GetAppProperties retrieves application-specific document properties
+func (u *Updater) GetAppProperties() (*AppProperties, error) {
+	if u == nil {
+		return nil, fmt.Errorf("updater is nil")
+	}
+
+	appPath := filepath.Join(u.tempDir, "docProps", "app.xml")
+	raw, err := os.ReadFile(appPath)
+	if err != nil {
+		return nil, &DocxError{
+			Code:    "PROPERTIES_ERROR",
+			Message: "failed to read app properties",
+			Err:     err,
+		}
+	}
+
+	content := string(raw)
+	props := &AppProperties{}
+
+	props.Company = u.extractAppProperty(content, "Company")
+	props.Manager = u.extractAppProperty(content, "Manager")
+	props.Application = u.extractAppProperty(content, "Application")
+	props.AppVersion = u.extractAppProperty(content, "AppVersion")
+	props.Template = u.extractAppProperty(content, "Template")
+	props.HyperlinkBase = u.extractAppProperty(content, "HyperlinkBase")
+
+	// Parse integer fields
+	if v := u.extractAppProperty(content, "TotalTime"); v != "" {
+		props.TotalTime, _ = strconv.Atoi(v)
+	}
+	if v := u.extractAppProperty(content, "Pages"); v != "" {
+		props.Pages, _ = strconv.Atoi(v)
+	}
+	if v := u.extractAppProperty(content, "Words"); v != "" {
+		props.Words, _ = strconv.Atoi(v)
+	}
+	if v := u.extractAppProperty(content, "Characters"); v != "" {
+		props.Characters, _ = strconv.Atoi(v)
+	}
+	if v := u.extractAppProperty(content, "CharactersWithSpaces"); v != "" {
+		props.CharactersWithSpaces, _ = strconv.Atoi(v)
+	}
+	if v := u.extractAppProperty(content, "Lines"); v != "" {
+		props.Lines, _ = strconv.Atoi(v)
+	}
+	if v := u.extractAppProperty(content, "Paragraphs"); v != "" {
+		props.Paragraphs, _ = strconv.Atoi(v)
+	}
+	if v := u.extractAppProperty(content, "DocSecurity"); v != "" {
+		props.DocSecurity, _ = strconv.Atoi(v)
+	}
+
+	return props, nil
+}
+
+// extractAppProperty extracts a property value from app.xml
+func (u *Updater) extractAppProperty(content, property string) string {
+	pattern := fmt.Sprintf(`<%s(?:\s[^>]*)?>([^<]*)</%s>`, regexp.QuoteMeta(property), regexp.QuoteMeta(property))
+	re := regexp.MustCompile(pattern)
+	if match := re.FindStringSubmatch(content); len(match) > 1 {
+		return match[1]
+	}
+	return ""
+}
+
+// GetCustomProperties retrieves custom document properties
+func (u *Updater) GetCustomProperties() ([]CustomProperty, error) {
+	if u == nil {
+		return nil, fmt.Errorf("updater is nil")
+	}
+
+	customPath := filepath.Join(u.tempDir, "docProps", "custom.xml")
+	raw, err := os.ReadFile(customPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, &DocxError{
+			Code:    "PROPERTIES_ERROR",
+			Message: "failed to read custom properties",
+			Err:     err,
+		}
+	}
+
+	content := string(raw)
+	return u.parseCustomPropertiesXML(content), nil
+}
+
+// parseCustomPropertiesXML parses custom.xml content into CustomProperty slice
+func (u *Updater) parseCustomPropertiesXML(content string) []CustomProperty {
+	var properties []CustomProperty
+
+	// Match each <property ...>...</property> element
+	propPattern := regexp.MustCompile(`(?s)<property[^>]*name="([^"]*?)"[^>]*>(.*?)</property>`)
+	propMatches := propPattern.FindAllStringSubmatch(content, -1)
+
+	for _, match := range propMatches {
+		if len(match) < 3 {
+			continue
+		}
+
+		name := match[1]
+		body := match[2]
+
+		prop := CustomProperty{Name: name}
+
+		// Try each value type
+		if v := extractVTValue(body, "lpwstr"); v != "" {
+			prop.Value = v
+			prop.Type = "lpwstr"
+		} else if v := extractVTValue(body, "i4"); v != "" {
+			prop.Type = "i4"
+			if intVal, err := strconv.Atoi(v); err == nil {
+				prop.Value = intVal
+			} else {
+				prop.Value = v
+			}
+		} else if v := extractVTValue(body, "r8"); v != "" {
+			prop.Type = "r8"
+			if floatVal, err := strconv.ParseFloat(v, 64); err == nil {
+				prop.Value = floatVal
+			} else {
+				prop.Value = v
+			}
+		} else if v := extractVTValue(body, "bool"); v != "" {
+			prop.Type = "bool"
+			prop.Value = strings.EqualFold(v, "true")
+		} else if v := extractVTValue(body, "filetime"); v != "" {
+			prop.Type = "date"
+			if t, err := time.Parse(time.RFC3339, v); err == nil {
+				prop.Value = t
+			} else {
+				prop.Value = v
+			}
+		}
+
+		properties = append(properties, prop)
+	}
+
+	return properties
+}
+
+// extractVTValue extracts the value from a vt: typed element
+func extractVTValue(body, vtType string) string {
+	pattern := fmt.Sprintf(`<vt:%s[^>]*>(.*?)</vt:%s>`, regexp.QuoteMeta(vtType), regexp.QuoteMeta(vtType))
+	re := regexp.MustCompile(pattern)
+	if match := re.FindStringSubmatch(body); len(match) > 1 {
+		return match[1]
+	}
+	return ""
 }
 
 // timeToFiletime converts time.Time to Windows FILETIME format

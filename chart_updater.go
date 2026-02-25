@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // Updater manages a DOCX document for programmatic reading and writing.
@@ -18,6 +19,63 @@ type Updater struct {
 
 	bulletListNumID   int
 	numberedListNumID int
+}
+
+// NewBlank creates a new blank DOCX document from scratch without requiring a template.
+// The document contains a minimal valid OpenXML structure ready for content insertion.
+func NewBlank() (*Updater, error) {
+	tempDir, err := os.MkdirTemp("", "docx-blank-*")
+	if err != nil {
+		return nil, fmt.Errorf("create temp dir: %w", err)
+	}
+
+	if err := writeBlankDocxStructure(tempDir); err != nil {
+		os.RemoveAll(tempDir)
+		return nil, fmt.Errorf("write blank docx: %w", err)
+	}
+
+	u := &Updater{originalPath: "", tempDir: tempDir}
+
+	if err := u.validateStructure(); err != nil {
+		u.Cleanup()
+		return nil, fmt.Errorf("invalid blank DOCX: %w", err)
+	}
+
+	return u, nil
+}
+
+// NewFromBytes creates an Updater from raw DOCX bytes (e.g., uploaded template data).
+// This is useful when the template is received from a web upload, API payload, or
+// database rather than a file on disk.
+func NewFromBytes(data []byte) (*Updater, error) {
+	if len(data) == 0 {
+		return nil, errors.New("docx data is empty")
+	}
+
+	tmpFile, err := os.CreateTemp("", "docx-bytes-*.docx")
+	if err != nil {
+		return nil, fmt.Errorf("create temp file: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+
+	if _, err := tmpFile.Write(data); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpPath)
+		return nil, fmt.Errorf("write temp file: %w", err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		os.Remove(tmpPath)
+		return nil, fmt.Errorf("close temp file: %w", err)
+	}
+
+	u, err := New(tmpPath)
+	if err != nil {
+		os.Remove(tmpPath)
+		return nil, err
+	}
+
+	u.tempInputFile = tmpPath
+	return u, nil
 }
 
 // New opens a DOCX file and prepares it for editing.
@@ -318,3 +376,75 @@ func (u *Updater) validateStructure() error {
 	}
 	return nil
 }
+
+// writeBlankDocxStructure creates a minimal valid DOCX file structure in the given directory.
+func writeBlankDocxStructure(dir string) error {
+	files := map[string]string{
+		"[Content_Types].xml": blankContentTypes,
+		"_rels/.rels":         blankRels,
+		filepath.Join("word", "document.xml"):             blankDocument,
+		filepath.Join("word", "_rels", "document.xml.rels"): blankDocumentRels,
+		filepath.Join("docProps", "core.xml"):               "", // generated below
+		filepath.Join("docProps", "app.xml"):                blankAppXML,
+	}
+
+	now := time.Now().Format(time.RFC3339)
+	files[filepath.Join("docProps", "core.xml")] = fmt.Sprintf(blankCoreXML, now, now)
+
+	for relPath, content := range files {
+		fullPath := filepath.Join(dir, relPath)
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
+			return fmt.Errorf("create dir for %s: %w", relPath, err)
+		}
+		if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
+			return fmt.Errorf("write %s: %w", relPath, err)
+		}
+	}
+
+	return nil
+}
+
+const blankContentTypes = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>
+</Types>`
+
+const blankRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
+</Relationships>`
+
+const blankDocument = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" mc:Ignorable="w14 wp14">
+<w:body>
+<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>
+</w:body>
+</w:document>`
+
+const blankDocumentRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+</Relationships>`
+
+const blankCoreXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<cp:revision>1</cp:revision>
+<dcterms:created xsi:type="dcterms:W3CDTF">%s</dcterms:created>
+<dcterms:modified xsi:type="dcterms:W3CDTF">%s</dcterms:modified>
+</cp:coreProperties>`
+
+const blankAppXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">
+<Application>go-docx</Application>
+<DocSecurity>0</DocSecurity>
+<ScaleCrop>false</ScaleCrop>
+<LinksUpToDate>false</LinksUpToDate>
+<SharedDoc>false</SharedDoc>
+<HyperlinksChanged>false</HyperlinksChanged>
+<AppVersion>16.0000</AppVersion>
+</Properties>`
