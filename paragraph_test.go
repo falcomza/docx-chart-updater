@@ -679,9 +679,9 @@ func TestMultiRunParagraphBackwardCompatibility(t *testing.T) {
 	defer u.Cleanup()
 
 	err = u.InsertParagraph(godocx.ParagraphOptions{
-		Text:      "Legacy bold paragraph",
-		Bold:      true,
-		Position:  godocx.PositionEnd,
+		Text:     "Legacy bold paragraph",
+		Bold:     true,
+		Position: godocx.PositionEnd,
 	})
 	if err != nil {
 		t.Fatalf("InsertParagraph (legacy) failed: %v", err)

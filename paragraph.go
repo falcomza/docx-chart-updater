@@ -67,10 +67,10 @@ type RunOptions struct {
 	// Character formatting
 	Bold          bool
 	Italic        bool
-	Underline     bool    // Single underline
-	Strikethrough bool    // Strikethrough text
-	Superscript   bool    // Raise text above baseline
-	Subscript     bool    // Lower text below baseline
+	Underline     bool // Single underline
+	Strikethrough bool // Strikethrough text
+	Superscript   bool // Raise text above baseline
+	Subscript     bool // Lower text below baseline
 
 	// Color is a 6-digit hex RGB value without '#', e.g. "FF0000" for red.
 	Color string
