@@ -56,16 +56,56 @@ const (
 	PositionBeforeText
 )
 
+// RunOptions defines formatting and content for a single text run within a paragraph.
+// A run is the smallest unit of text in OpenXML that can carry its own character formatting.
+// Use multiple RunOptions in ParagraphOptions.Runs to mix bold, italic, colored, and
+// differently-sized text within the same paragraph.
+type RunOptions struct {
+	// Text is the content of this run. Newlines (\n) become <w:br/> and tabs (\t) become <w:tab/>.
+	Text string
+
+	// Character formatting
+	Bold          bool
+	Italic        bool
+	Underline     bool    // Single underline
+	Strikethrough bool    // Strikethrough text
+	Superscript   bool    // Raise text above baseline
+	Subscript     bool    // Lower text below baseline
+
+	// Color is a 6-digit hex RGB value without '#', e.g. "FF0000" for red.
+	Color string
+
+	// Highlight is a named highlight color: "yellow", "green", "cyan", "magenta",
+	// "blue", "red", "darkBlue", "darkCyan", "darkGreen", "darkMagenta",
+	// "darkRed", "darkYellow", "darkGray", "lightGray", "black".
+	Highlight string
+
+	// FontSize is the font size in points (e.g. 12.0). Zero means inherit.
+	FontSize float64
+
+	// FontName sets the ASCII/Unicode font (e.g. "Arial", "Times New Roman").
+	FontName string
+}
+
 // ParagraphOptions defines options for paragraph insertion
 type ParagraphOptions struct {
+	// Text is used when Runs is empty — the whole paragraph gets a single run with
+	// the Bold/Italic/Underline flags below applied uniformly.
 	Text      string         // The text content of the paragraph
 	Style     ParagraphStyle // The style to apply (default: Normal)
 	Alignment ParagraphAlignment
 	Position  InsertPosition // Where to insert the paragraph
 	Anchor    string         // Text to anchor the insertion (for PositionAfterText/PositionBeforeText)
-	Bold      bool           // Make text bold
-	Italic    bool           // Make text italic
-	Underline bool           // Underline text
+
+	// Single-run formatting flags — only used when Runs is empty.
+	Bold      bool // Make text bold
+	Italic    bool // Make text italic
+	Underline bool // Underline text
+
+	// Runs allows building a multi-run paragraph where each run can have independent
+	// character formatting. When Runs is non-empty, Text/Bold/Italic/Underline above
+	// are ignored.
+	Runs []RunOptions
 
 	// List properties (alternative to Style-based lists)
 	ListType  ListType // Type of list (bullet or numbered)
@@ -82,8 +122,8 @@ func (u *Updater) InsertParagraph(opts ParagraphOptions) error {
 	if u == nil {
 		return fmt.Errorf("updater is nil")
 	}
-	if opts.Text == "" {
-		return fmt.Errorf("paragraph text cannot be empty")
+	if opts.Text == "" && len(opts.Runs) == 0 {
+		return fmt.Errorf("paragraph text cannot be empty: provide Text or at least one Run")
 	}
 
 	// Default style to Normal if not specified
@@ -175,31 +215,79 @@ func generateParagraphXML(opts ParagraphOptions, listIDs listNumberingIDs) []byt
 
 	buf.WriteString("</w:pPr>")
 
-	// Add text run
+	if len(opts.Runs) > 0 {
+		// Multi-run paragraph: emit one <w:r> per RunOptions entry.
+		for _, run := range opts.Runs {
+			writeRunXML(&buf, run)
+		}
+	} else {
+		// Legacy single-run paragraph using top-level Text/Bold/Italic/Underline.
+		legacyRun := RunOptions{
+			Text:      opts.Text,
+			Bold:      opts.Bold,
+			Italic:    opts.Italic,
+			Underline: opts.Underline,
+		}
+		writeRunXML(&buf, legacyRun)
+	}
+
+	buf.WriteString("</w:p>")
+
+	return buf.Bytes()
+}
+
+// writeRunXML emits a full <w:r>...</w:r> element for the given RunOptions.
+func writeRunXML(buf *bytes.Buffer, run RunOptions) {
 	buf.WriteString("<w:r>")
 
-	// Add run properties for formatting
-	hasFormatting := opts.Bold || opts.Italic || opts.Underline
-	if hasFormatting {
+	hasRPr := run.Bold || run.Italic || run.Underline || run.Strikethrough ||
+		run.Superscript || run.Subscript ||
+		run.Color != "" || run.Highlight != "" ||
+		run.FontSize > 0 || run.FontName != ""
+
+	if hasRPr {
 		buf.WriteString("<w:rPr>")
-		if opts.Bold {
+		if run.FontName != "" {
+			buf.WriteString(fmt.Sprintf(
+				`<w:rFonts w:ascii="%s" w:hAnsi="%s"/>`,
+				xmlEscape(run.FontName), xmlEscape(run.FontName),
+			))
+		}
+		if run.Bold {
 			buf.WriteString("<w:b/>")
 		}
-		if opts.Italic {
+		if run.Italic {
 			buf.WriteString("<w:i/>")
 		}
-		if opts.Underline {
-			buf.WriteString("<w:u w:val=\"single\"/>")
+		if run.Strikethrough {
+			buf.WriteString("<w:strike/>")
+		}
+		if run.Color != "" {
+			buf.WriteString(fmt.Sprintf(`<w:color w:val="%s"/>`, xmlEscape(run.Color)))
+		}
+		if run.Highlight != "" {
+			buf.WriteString(fmt.Sprintf(`<w:highlight w:val="%s"/>`, xmlEscape(run.Highlight)))
+		}
+		if run.Underline {
+			buf.WriteString(`<w:u w:val="single"/>`)
+		}
+		if run.FontSize > 0 {
+			// w:sz is in half-points
+			hp := int(run.FontSize * 2)
+			buf.WriteString(fmt.Sprintf(`<w:sz w:val="%d"/>`, hp))
+			buf.WriteString(fmt.Sprintf(`<w:szCs w:val="%d"/>`, hp))
+		}
+		if run.Superscript {
+			buf.WriteString(`<w:vertAlign w:val="superscript"/>`)
+		} else if run.Subscript {
+			buf.WriteString(`<w:vertAlign w:val="subscript"/>`)
 		}
 		buf.WriteString("</w:rPr>")
 	}
 
-	writeRunTextWithControls(&buf, opts.Text)
+	writeRunTextWithControls(buf, run.Text)
 
 	buf.WriteString("</w:r>")
-	buf.WriteString("</w:p>")
-
-	return buf.Bytes()
 }
 
 func writeRunTextWithControls(buf *bytes.Buffer, text string) {

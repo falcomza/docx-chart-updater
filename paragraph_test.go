@@ -572,3 +572,151 @@ func buildFixtureDocxWithTabBreakAnchor(t *testing.T) []byte {
 
 	return docx.Bytes()
 }
+
+// ─── Multi-run paragraph tests ────────────────────────────────────────────────
+
+func TestMultiRunParagraphBasic(t *testing.T) {
+	tempDir := t.TempDir()
+	inputPath := filepath.Join(tempDir, "input.docx")
+	outputPath := filepath.Join(tempDir, "output.docx")
+	if err := os.WriteFile(inputPath, buildFixtureDocx(t), 0o644); err != nil {
+		t.Fatalf("write input fixture: %v", err)
+	}
+
+	u, err := godocx.New(inputPath)
+	if err != nil {
+		t.Fatalf("New failed: %v", err)
+	}
+	defer u.Cleanup()
+
+	err = u.InsertParagraph(godocx.ParagraphOptions{
+		Position: godocx.PositionEnd,
+		Runs: []godocx.RunOptions{
+			{Text: "Hello "},
+			{Text: "bold", Bold: true},
+			{Text: " and "},
+			{Text: "italic", Italic: true},
+		},
+	})
+	if err != nil {
+		t.Fatalf("InsertParagraph with Runs failed: %v", err)
+	}
+	if err := u.Save(outputPath); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+
+	docXML := readZipEntry(t, outputPath, "word/document.xml")
+	for _, want := range []string{"Hello ", "bold", "italic", "<w:b/>", "<w:i/>"} {
+		if !strings.Contains(docXML, want) {
+			t.Errorf("expected %q in document.xml", want)
+		}
+	}
+}
+
+func TestMultiRunParagraphAllFormatting(t *testing.T) {
+	tempDir := t.TempDir()
+	inputPath := filepath.Join(tempDir, "input.docx")
+	outputPath := filepath.Join(tempDir, "output.docx")
+	if err := os.WriteFile(inputPath, buildFixtureDocx(t), 0o644); err != nil {
+		t.Fatalf("write input fixture: %v", err)
+	}
+
+	u, err := godocx.New(inputPath)
+	if err != nil {
+		t.Fatalf("New failed: %v", err)
+	}
+	defer u.Cleanup()
+
+	err = u.InsertParagraph(godocx.ParagraphOptions{
+		Position: godocx.PositionEnd,
+		Runs: []godocx.RunOptions{
+			{Text: "red", Color: "FF0000"},
+			{Text: "strike", Strikethrough: true},
+			{Text: "big", FontSize: 18},
+			{Text: "Arial", FontName: "Arial"},
+			{Text: "hi", Highlight: "yellow"},
+			{Text: "sup", Superscript: true},
+			{Text: "sub", Subscript: true},
+		},
+	})
+	if err != nil {
+		t.Fatalf("InsertParagraph with Runs failed: %v", err)
+	}
+	if err := u.Save(outputPath); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+
+	docXML := readZipEntry(t, outputPath, "word/document.xml")
+	checks := []string{
+		`w:val="FF0000"`,
+		`<w:strike/>`,
+		`w:val="36"`, // 18pt * 2 half-points
+		`w:ascii="Arial"`,
+		`w:val="yellow"`,
+		`w:val="superscript"`,
+		`w:val="subscript"`,
+	}
+	for _, want := range checks {
+		if !strings.Contains(docXML, want) {
+			t.Errorf("expected %q in document.xml", want)
+		}
+	}
+}
+
+func TestMultiRunParagraphBackwardCompatibility(t *testing.T) {
+	// Ensures the old Text/Bold/Italic/Underline path still works unchanged.
+	tempDir := t.TempDir()
+	inputPath := filepath.Join(tempDir, "input.docx")
+	outputPath := filepath.Join(tempDir, "output.docx")
+	if err := os.WriteFile(inputPath, buildFixtureDocx(t), 0o644); err != nil {
+		t.Fatalf("write input fixture: %v", err)
+	}
+
+	u, err := godocx.New(inputPath)
+	if err != nil {
+		t.Fatalf("New failed: %v", err)
+	}
+	defer u.Cleanup()
+
+	err = u.InsertParagraph(godocx.ParagraphOptions{
+		Text:      "Legacy bold paragraph",
+		Bold:      true,
+		Position:  godocx.PositionEnd,
+	})
+	if err != nil {
+		t.Fatalf("InsertParagraph (legacy) failed: %v", err)
+	}
+	if err := u.Save(outputPath); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+
+	docXML := readZipEntry(t, outputPath, "word/document.xml")
+	if !strings.Contains(docXML, "Legacy bold paragraph") {
+		t.Error("legacy text not found")
+	}
+	if !strings.Contains(docXML, "<w:b/>") {
+		t.Error("<w:b/> not found for legacy bold")
+	}
+}
+
+func TestMultiRunParagraphEmptyRunsAndTextError(t *testing.T) {
+	tempDir := t.TempDir()
+	inputPath := filepath.Join(tempDir, "input.docx")
+	if err := os.WriteFile(inputPath, buildFixtureDocx(t), 0o644); err != nil {
+		t.Fatalf("write input fixture: %v", err)
+	}
+
+	u, err := godocx.New(inputPath)
+	if err != nil {
+		t.Fatalf("New failed: %v", err)
+	}
+	defer u.Cleanup()
+
+	err = u.InsertParagraph(godocx.ParagraphOptions{
+		Position: godocx.PositionEnd,
+		// Neither Text nor Runs supplied
+	})
+	if err == nil {
+		t.Fatal("expected error for empty Text and empty Runs, got nil")
+	}
+}
