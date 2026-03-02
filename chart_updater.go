@@ -116,6 +116,9 @@ func New(docxPath string) (*Updater, error) {
 }
 
 // TempDir returns the temporary directory where the DOCX was extracted.
+// It is intended for testing and advanced use only. Callers that read or write
+// files directly inside TempDir bypass all validation and relationship tracking
+// performed by the Updater methods.
 func (u *Updater) TempDir() string {
 	return u.tempDir
 }
@@ -136,8 +139,7 @@ func (u *Updater) GetChartCount() (int, error) {
 	}
 	var count int
 	for _, e := range entries {
-		name := e.Name()
-		if !e.IsDir() && strings.HasPrefix(name, "chart") && strings.HasSuffix(name, ".xml") {
+		if !e.IsDir() && chartFilePattern.MatchString(e.Name()) {
 			count++
 		}
 	}
@@ -401,7 +403,7 @@ func writeBlankDocxStructure(dir string) error {
 		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
 			return fmt.Errorf("create dir for %s: %w", relPath, err)
 		}
-		if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
+		if err := atomicWriteFile(fullPath, []byte(content), 0o644); err != nil {
 			return fmt.Errorf("write %s: %w", relPath, err)
 		}
 	}

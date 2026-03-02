@@ -2,8 +2,8 @@ package godocx
 
 import (
 	"bytes"
+	"encoding/xml"
 	"fmt"
-	"html"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +17,12 @@ const (
 	StyleHeading1   ParagraphStyle = "Heading1"
 	StyleHeading2   ParagraphStyle = "Heading2"
 	StyleHeading3   ParagraphStyle = "Heading3"
+	StyleHeading4   ParagraphStyle = "Heading4"
+	StyleHeading5   ParagraphStyle = "Heading5"
+	StyleHeading6   ParagraphStyle = "Heading6"
+	StyleHeading7   ParagraphStyle = "Heading7"
+	StyleHeading8   ParagraphStyle = "Heading8"
+	StyleHeading9   ParagraphStyle = "Heading9"
 	StyleTitle      ParagraphStyle = "Title"
 	StyleSubtitle   ParagraphStyle = "Subtitle"
 	StyleQuote      ParagraphStyle = "Quote"
@@ -182,7 +188,7 @@ func (u *Updater) InsertParagraph(opts ParagraphOptions) error {
 	}
 
 	// Write updated document
-	if err := os.WriteFile(docPath, updated, 0o644); err != nil {
+	if err := atomicWriteFile(docPath, updated, 0o644); err != nil {
 		return fmt.Errorf("write document.xml: %w", err)
 	}
 
@@ -254,7 +260,7 @@ func (u *Updater) InsertParagraphs(paragraphs []ParagraphOptions) error {
 	}
 
 	// Write document.xml once.
-	if err := os.WriteFile(docPath, raw, 0o644); err != nil {
+	if err := atomicWriteFile(docPath, raw, 0o644); err != nil {
 		return fmt.Errorf("write document.xml: %w", err)
 	}
 	return nil
@@ -749,27 +755,47 @@ func normalizeWhitespace(s string) string {
 	return strings.Join(strings.Fields(s), " ")
 }
 
-// xmlUnescape decodes XML/HTML character references, including named entities
-// (&amp; &lt; &gt; &quot; &apos;) and numeric references (&#160; &#x00A0;).
-// It delegates to html.UnescapeString which handles the full HTML5 entity table;
-// all named entities defined in XML 1.0 are a strict subset of that table.
+// xmlUnescape decodes XML character references, including the five predefined
+// named entities (&amp; &lt; &gt; &quot; &apos;) and numeric references
+// (&#160; &#x00A0;). Uses the stdlib XML decoder for correctness.
 func xmlUnescape(s string) string {
-	return html.UnescapeString(s)
+	d := xml.NewDecoder(strings.NewReader("<x>" + s + "</x>"))
+	tok, err := d.Token() // <x> StartElement
+	if err != nil {
+		return s
+	}
+	_ = tok
+	tok, err = d.Token() // CharData or EndElement if s is empty
+	if err != nil {
+		return s
+	}
+	if cd, ok := tok.(xml.CharData); ok {
+		return string(cd)
+	}
+	return s
 }
 
-// AddHeading is a convenience function to add a heading paragraph
+// headingStyles maps heading level (1-9) to the corresponding ParagraphStyle.
+var headingStyles = [10]ParagraphStyle{
+	0: "", // unused – levels are 1-based
+	1: StyleHeading1,
+	2: StyleHeading2,
+	3: StyleHeading3,
+	4: StyleHeading4,
+	5: StyleHeading5,
+	6: StyleHeading6,
+	7: StyleHeading7,
+	8: StyleHeading8,
+	9: StyleHeading9,
+}
+
+// AddHeading is a convenience function to add a heading paragraph at the
+// specified level (1–9), matching Word's built-in Heading 1 – Heading 9 styles.
 func (u *Updater) AddHeading(level int, text string, position InsertPosition) error {
-	style := StyleHeading1
-	switch level {
-	case 1:
-		style = StyleHeading1
-	case 2:
-		style = StyleHeading2
-	case 3:
-		style = StyleHeading3
-	default:
-		return fmt.Errorf("heading level must be 1, 2, or 3")
+	if level < 1 || level > 9 {
+		return fmt.Errorf("heading level must be between 1 and 9, got %d", level)
 	}
+	style := headingStyles[level]
 
 	return u.InsertParagraph(ParagraphOptions{
 		Text:     text,
