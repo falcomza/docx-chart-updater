@@ -92,6 +92,14 @@ const (
 // OpenXML content types
 const (
 	ChartContentType = "application/vnd.openxmlformats-officedocument.drawingml.chart+xml"
+
+	// DocxMainContentType is the document body content type for .docx files.
+	DocxMainContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
+
+	// DotxMainContentType is the document body content type for .dotx template files.
+	// New() automatically promotes this to DocxMainContentType so templates can be
+	// used as input without any special handling by the caller.
+	DotxMainContentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.template.main+xml"
 	ImageJPEGType    = "image/jpeg"
 	ImagePNGType     = "image/png"
 	ImageGIFType     = "image/gif"

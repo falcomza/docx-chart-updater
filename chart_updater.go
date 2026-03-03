@@ -104,6 +104,13 @@ func New(docxPath string) (*Updater, error) {
 		return nil, fmt.Errorf("extract docx: %w", err)
 	}
 
+	// Promote .dotx template content type to .docx document content type so that
+	// callers can pass either file format transparently.
+	if err := normalizeTemplateToDocument(tempDir); err != nil {
+		os.RemoveAll(tempDir)
+		return nil, fmt.Errorf("normalize template: %w", err)
+	}
+
 	u := &Updater{originalPath: docxPath, tempDir: tempDir}
 
 	// Validate DOCX structure
@@ -366,6 +373,22 @@ func findRelationshipTarget(relsPath, relationshipID string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("relationship %s not found", relationshipID)
+}
+
+// normalizeTemplateToDocument promotes a DOTX template content type to a DOCX
+// document content type in [Content_Types].xml. It is a no-op for regular DOCX files.
+func normalizeTemplateToDocument(tempDir string) error {
+	ctPath := filepath.Join(tempDir, "[Content_Types].xml")
+	data, err := os.ReadFile(ctPath)
+	if err != nil {
+		return fmt.Errorf("read [Content_Types].xml: %w", err)
+	}
+	content := string(data)
+	if !strings.Contains(content, DotxMainContentType) {
+		return nil
+	}
+	updated := strings.ReplaceAll(content, DotxMainContentType, DocxMainContentType)
+	return atomicWriteFile(ctPath, []byte(updated), 0o644)
 }
 
 // validateStructure checks that required OpenXML parts exist.
