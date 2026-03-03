@@ -120,8 +120,9 @@ type ParagraphOptions struct {
 	Runs []RunOptions
 
 	// List properties (alternative to Style-based lists)
-	ListType  ListType // Type of list (bullet or numbered)
-	ListLevel int      // Indentation level (0-8, default 0)
+	ListType    ListType // Type of list (bullet or numbered)
+	ListLevel   int      // Indentation level (0-8, default 0)
+	ListRestart bool     // Restart numbered list at 1 (creates a fresh numId with startOverride)
 
 	// Pagination control
 	KeepNext  bool // Keep this paragraph on the same page as the next (prevents orphaned headings)
@@ -131,6 +132,7 @@ type ParagraphOptions struct {
 type listNumberingIDs struct {
 	bulletNumID   int
 	numberedNumID int
+	restartNumID  int // non-zero: use this numId for the current numbered paragraph (restart)
 }
 
 // InsertParagraph inserts a new paragraph into the document
@@ -155,6 +157,15 @@ func (u *Updater) InsertParagraph(opts ParagraphOptions) error {
 			return fmt.Errorf("ensure numbering: %w", err)
 		}
 		listIDs = u.getListNumberingIDs()
+
+		// Allocate a fresh numId with startOverride when restarting a numbered list.
+		if opts.ListRestart && opts.ListType == ListTypeNumbered {
+			restartID, err := u.allocateRestartNumID(opts.ListLevel)
+			if err != nil {
+				return fmt.Errorf("allocate restart numId: %w", err)
+			}
+			listIDs.restartNumID = restartID
+		}
 	}
 
 	// Read document.xml
@@ -224,6 +235,18 @@ func (u *Updater) InsertParagraphs(paragraphs []ParagraphOptions) error {
 	}
 	listIDs := u.getListNumberingIDs()
 
+	// Pre-allocate restart numIds — one fresh <w:num> per restarting numbered paragraph.
+	restartNumIDs := make([]int, len(paragraphs))
+	for i, opts := range paragraphs {
+		if opts.ListRestart && opts.ListType == ListTypeNumbered {
+			restartID, err := u.allocateRestartNumID(opts.ListLevel)
+			if err != nil {
+				return fmt.Errorf("allocate restart numId for paragraph %d: %w", i, err)
+			}
+			restartNumIDs[i] = restartID
+		}
+	}
+
 	// Pre-register all URL relationships in a single pass.
 	urlRelIDs := make(map[string]string)
 	for _, opts := range paragraphs {
@@ -252,7 +275,11 @@ func (u *Updater) InsertParagraphs(paragraphs []ParagraphOptions) error {
 		if opts.Style == "" {
 			opts.Style = StyleNormal
 		}
-		paraXML := generateParagraphXML(opts, listIDs, urlRelIDs)
+		paraListIDs := listIDs
+		if restartNumIDs[i] > 0 {
+			paraListIDs.restartNumID = restartNumIDs[i]
+		}
+		paraXML := generateParagraphXML(opts, paraListIDs, urlRelIDs)
 		raw, err = insertParagraphAtPosition(raw, paraXML, opts)
 		if err != nil {
 			return fmt.Errorf("insert paragraph %d: %w", i, err)
@@ -293,7 +320,11 @@ func generateParagraphXML(opts ParagraphOptions, listIDs listNumberingIDs, urlRe
 		if opts.ListType == ListTypeBullet {
 			numID = listIDs.bulletNumID
 		} else if opts.ListType == ListTypeNumbered {
-			numID = listIDs.numberedNumID
+			if opts.ListRestart && listIDs.restartNumID > 0 {
+				numID = listIDs.restartNumID
+			} else {
+				numID = listIDs.numberedNumID
+			}
 		}
 
 		if numID > 0 {
@@ -830,6 +861,19 @@ func (u *Updater) AddNumberedItem(text string, level int, position InsertPositio
 		ListType:  ListTypeNumbered,
 		ListLevel: level,
 		Position:  position,
+	})
+}
+
+// AddNumberedItemRestart adds a numbered list item that restarts numbering at 1.
+// It allocates a fresh numId with a startOverride in numbering.xml so the list
+// counter resets independently of any preceding numbered list in the document.
+func (u *Updater) AddNumberedItemRestart(text string, level int, position InsertPosition) error {
+	return u.InsertParagraph(ParagraphOptions{
+		Text:        text,
+		ListType:    ListTypeNumbered,
+		ListLevel:   level,
+		Position:    position,
+		ListRestart: true,
 	})
 }
 

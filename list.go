@@ -21,6 +21,8 @@ var (
 	docxUpdateNumberedNumIDPattern = regexp.MustCompile(`DOCXUPDATE_NUMBERED_NUMID:(\d+)`)
 	numIDPattern                   = regexp.MustCompile(`w:numId="(\d+)"`)
 	abstractNumIDPattern           = regexp.MustCompile(`w:abstractNumId="(\d+)"`)
+	// abstractNumRefPattern matches the child element <w:abstractNumId w:val="N"/> inside a <w:num> block.
+	abstractNumRefPattern = regexp.MustCompile(`<w:abstractNumId[^>]+w:val="(\d+)"`)
 )
 
 // ensureNumberingXML ensures numbering.xml exists with bullet and numbered list support
@@ -217,6 +219,74 @@ func findMaxXMLAttributeInt(content string, pattern *regexp.Regexp) int {
 func (u *Updater) setListNumberingIDs(bulletID, numberedID int) {
 	u.bulletListNumID = bulletID
 	u.numberedListNumID = numberedID
+}
+
+// allocateRestartNumID appends a new <w:num> entry to numbering.xml that references
+// the same abstractNumId as the current numbered list but adds a
+// <w:lvlOverride><w:startOverride w:val="1"/></w:lvlOverride> for the given level.
+// It returns the newly allocated numId. ensureNumberingXML must have been called first.
+func (u *Updater) allocateRestartNumID(level int) (int, error) {
+	numberingPath := filepath.Join(u.tempDir, "word", "numbering.xml")
+	data, err := os.ReadFile(numberingPath)
+	if err != nil {
+		return 0, fmt.Errorf("read numbering.xml: %w", err)
+	}
+	content := string(data)
+
+	ids := u.getListNumberingIDs()
+	abstractID := findAbstractNumIDForNum(content, ids.numberedNumID)
+	if abstractID < 0 {
+		return 0, fmt.Errorf("could not find abstractNumId for numbered list numId=%d", ids.numberedNumID)
+	}
+
+	maxNumID := findMaxXMLAttributeInt(content, numIDPattern)
+	newNumID := maxNumID + 1
+
+	level = min(max(level, 0), 8)
+
+	newNum := fmt.Sprintf(
+		"\n  <w:num w:numId=\"%d\">\n    <w:abstractNumId w:val=\"%d\"/>\n    <w:lvlOverride w:ilvl=\"%d\">\n      <w:startOverride w:val=\"1\"/>\n    </w:lvlOverride>\n  </w:num>",
+		newNumID, abstractID, level,
+	)
+
+	closingTag := "</w:numbering>"
+	insertPos := strings.LastIndex(content, closingTag)
+	if insertPos == -1 {
+		return 0, fmt.Errorf("invalid numbering.xml: missing </w:numbering>")
+	}
+
+	updated := content[:insertPos] + newNum + "\n" + content[insertPos:]
+	if err := atomicWriteFile(numberingPath, []byte(updated), 0o644); err != nil {
+		return 0, fmt.Errorf("write numbering.xml: %w", err)
+	}
+
+	return newNumID, nil
+}
+
+// findAbstractNumIDForNum returns the abstractNumId referenced by the given numId,
+// or -1 if not found.
+func findAbstractNumIDForNum(content string, numID int) int {
+	// Locate the exact opening tag <w:num w:numId="N"> to avoid partial-number matches.
+	numBlock := fmt.Sprintf(`<w:num w:numId="%d">`, numID)
+	idx := strings.Index(content, numBlock)
+	if idx == -1 {
+		return -1
+	}
+	rest := content[idx:]
+	closeIdx := strings.Index(rest, "</w:num>")
+	if closeIdx == -1 {
+		return -1
+	}
+	block := rest[:closeIdx]
+	match := abstractNumRefPattern.FindStringSubmatch(block)
+	if len(match) < 2 {
+		return -1
+	}
+	val, err := strconv.Atoi(match[1])
+	if err != nil {
+		return -1
+	}
+	return val
 }
 
 func (u *Updater) getListNumberingIDs() listNumberingIDs {

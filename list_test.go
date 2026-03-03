@@ -3,6 +3,7 @@ package godocx
 import (
 	"archive/zip"
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -490,6 +491,119 @@ func TestEnsureNumberingXMLPreservesExistingDefinitions(t *testing.T) {
 	}
 	if strings.Contains(docXML, `<w:numId w:val="1"/>`) {
 		t.Error("managed list reused existing numId=1; expected non-conflicting numId")
+	}
+}
+
+func TestNumberedListRestart(t *testing.T) {
+	tempDir := t.TempDir()
+	inputPath := filepath.Join(tempDir, "input.docx")
+	outputPath := filepath.Join(tempDir, "output.docx")
+
+	if err := os.WriteFile(inputPath, buildFixtureDocx(t), 0o644); err != nil {
+		t.Fatalf("write input fixture: %v", err)
+	}
+
+	u, err := New(inputPath)
+	if err != nil {
+		t.Fatalf("New failed: %v", err)
+	}
+	defer u.Cleanup()
+
+	// First list: items 1, 2, 3.
+	if err := u.AddNumberedItem("First list item 1", 0, PositionEnd); err != nil {
+		t.Fatalf("AddNumberedItem failed: %v", err)
+	}
+	if err := u.AddNumberedItem("First list item 2", 0, PositionEnd); err != nil {
+		t.Fatalf("AddNumberedItem failed: %v", err)
+	}
+
+	// Restart: a second independent list starting at 1 again.
+	if err := u.AddNumberedItemRestart("Second list item 1", 0, PositionEnd); err != nil {
+		t.Fatalf("AddNumberedItemRestart failed: %v", err)
+	}
+	if err := u.AddNumberedItem("Second list item 2", 0, PositionEnd); err != nil {
+		t.Fatalf("AddNumberedItem failed: %v", err)
+	}
+
+	if err := u.Save(outputPath); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+
+	numberingXML := readZipEntry(t, outputPath, "word/numbering.xml")
+
+	// A fresh <w:num> with a startOverride must have been created.
+	if !strings.Contains(numberingXML, "<w:startOverride w:val=\"1\"/>") {
+		t.Error("startOverride not found in numbering.xml")
+	}
+	if !strings.Contains(numberingXML, "<w:lvlOverride") {
+		t.Error("lvlOverride not found in numbering.xml")
+	}
+
+	docXML := readZipEntry(t, outputPath, "word/document.xml")
+
+	// The restart paragraph must reference a different numId from the base list.
+	baseNumID := u.numberedListNumID
+	expectedRestartNumID := baseNumID + 1
+	baseRef := fmt.Sprintf(`<w:numId w:val="%d"/>`, baseNumID)
+	restartRef := fmt.Sprintf(`<w:numId w:val="%d"/>`, expectedRestartNumID)
+
+	// Verify base list numId present.
+	if !strings.Contains(docXML, baseRef) {
+		t.Errorf("base numbered list numId not found (looking for %s)", baseRef)
+	}
+	// Verify restart numId present.
+	if !strings.Contains(docXML, restartRef) {
+		t.Errorf("restart numId not found (looking for %s)", restartRef)
+	}
+
+	// Verify all text items are present.
+	for _, text := range []string{"First list item 1", "First list item 2", "Second list item 1", "Second list item 2"} {
+		if !strings.Contains(docXML, text) {
+			t.Errorf("text not found: %s", text)
+		}
+	}
+}
+
+func TestListRestartViaInsertParagraphs(t *testing.T) {
+	tempDir := t.TempDir()
+	inputPath := filepath.Join(tempDir, "input.docx")
+	outputPath := filepath.Join(tempDir, "output.docx")
+
+	if err := os.WriteFile(inputPath, buildFixtureDocx(t), 0o644); err != nil {
+		t.Fatalf("write input fixture: %v", err)
+	}
+
+	u, err := New(inputPath)
+	if err != nil {
+		t.Fatalf("New failed: %v", err)
+	}
+	defer u.Cleanup()
+
+	paragraphs := []ParagraphOptions{
+		{Text: "List A item 1", ListType: ListTypeNumbered, ListLevel: 0, Position: PositionEnd},
+		{Text: "List A item 2", ListType: ListTypeNumbered, ListLevel: 0, Position: PositionEnd},
+		{Text: "List B item 1", ListType: ListTypeNumbered, ListLevel: 0, Position: PositionEnd, ListRestart: true},
+		{Text: "List B item 2", ListType: ListTypeNumbered, ListLevel: 0, Position: PositionEnd},
+	}
+
+	if err := u.InsertParagraphs(paragraphs); err != nil {
+		t.Fatalf("InsertParagraphs failed: %v", err)
+	}
+
+	if err := u.Save(outputPath); err != nil {
+		t.Fatalf("Save failed: %v", err)
+	}
+
+	numberingXML := readZipEntry(t, outputPath, "word/numbering.xml")
+	if !strings.Contains(numberingXML, "<w:startOverride w:val=\"1\"/>") {
+		t.Error("startOverride not found in numbering.xml for batch insert")
+	}
+
+	docXML := readZipEntry(t, outputPath, "word/document.xml")
+	for _, text := range []string{"List A item 1", "List A item 2", "List B item 1", "List B item 2"} {
+		if !strings.Contains(docXML, text) {
+			t.Errorf("text not found: %s", text)
+		}
 	}
 }
 
