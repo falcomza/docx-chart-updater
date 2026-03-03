@@ -221,22 +221,13 @@ func (u *Updater) setListNumberingIDs(bulletID, numberedID int) {
 	u.numberedListNumID = numberedID
 }
 
-// allocateRestartNumID appends a new <w:num> entry to numbering.xml that references
-// the same abstractNumId as the current numbered list but adds a
-// <w:lvlOverride><w:startOverride w:val="1"/></w:lvlOverride> for the given level.
-// It returns the newly allocated numId. ensureNumberingXML must have been called first.
-func (u *Updater) allocateRestartNumID(level int) (int, error) {
-	numberingPath := filepath.Join(u.tempDir, "word", "numbering.xml")
-	data, err := os.ReadFile(numberingPath)
-	if err != nil {
-		return 0, fmt.Errorf("read numbering.xml: %w", err)
-	}
-	content := string(data)
-
-	ids := u.getListNumberingIDs()
-	abstractID := findAbstractNumIDForNum(content, ids.numberedNumID)
+// allocateRestartNumIDInContent appends a new <w:num> entry to an in-memory
+// numbering.xml content string, returning the new numId and updated content.
+// level is clamped to [0, 8]. numberedNumID is the numId of the base numbered list.
+func allocateRestartNumIDInContent(content string, numberedNumID, level int) (int, string, error) {
+	abstractID := findAbstractNumIDForNum(content, numberedNumID)
 	if abstractID < 0 {
-		return 0, fmt.Errorf("could not find abstractNumId for numbered list numId=%d", ids.numberedNumID)
+		return 0, "", fmt.Errorf("could not find abstractNumId for numbered list numId=%d", numberedNumID)
 	}
 
 	maxNumID := findMaxXMLAttributeInt(content, numIDPattern)
@@ -252,10 +243,30 @@ func (u *Updater) allocateRestartNumID(level int) (int, error) {
 	closingTag := "</w:numbering>"
 	insertPos := strings.LastIndex(content, closingTag)
 	if insertPos == -1 {
-		return 0, fmt.Errorf("invalid numbering.xml: missing </w:numbering>")
+		return 0, "", fmt.Errorf("invalid numbering.xml: missing </w:numbering>")
 	}
 
 	updated := content[:insertPos] + newNum + "\n" + content[insertPos:]
+	return newNumID, updated, nil
+}
+
+// allocateRestartNumID appends a new <w:num> entry to numbering.xml that references
+// the same abstractNumId as the current numbered list but adds a
+// <w:lvlOverride><w:startOverride w:val="1"/></w:lvlOverride> for the given level.
+// It returns the newly allocated numId. ensureNumberingXML must have been called first.
+func (u *Updater) allocateRestartNumID(level int) (int, error) {
+	numberingPath := filepath.Join(u.tempDir, "word", "numbering.xml")
+	data, err := os.ReadFile(numberingPath)
+	if err != nil {
+		return 0, fmt.Errorf("read numbering.xml: %w", err)
+	}
+
+	ids := u.getListNumberingIDs()
+	newNumID, updated, err := allocateRestartNumIDInContent(string(data), ids.numberedNumID, level)
+	if err != nil {
+		return 0, err
+	}
+
 	if err := atomicWriteFile(numberingPath, []byte(updated), 0o644); err != nil {
 		return 0, fmt.Errorf("write numbering.xml: %w", err)
 	}

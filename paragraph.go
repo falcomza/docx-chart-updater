@@ -132,7 +132,6 @@ type ParagraphOptions struct {
 type listNumberingIDs struct {
 	bulletNumID   int
 	numberedNumID int
-	restartNumID  int // non-zero: use this numId for the current numbered paragraph (restart)
 }
 
 // InsertParagraph inserts a new paragraph into the document
@@ -150,6 +149,7 @@ func (u *Updater) InsertParagraph(opts ParagraphOptions) error {
 	}
 
 	listIDs := listNumberingIDs{bulletNumID: BulletListNumID, numberedNumID: NumberedListNumID}
+	var restartNumID int
 
 	// Ensure numbering.xml exists if using lists
 	if opts.ListType != "" {
@@ -160,11 +160,11 @@ func (u *Updater) InsertParagraph(opts ParagraphOptions) error {
 
 		// Allocate a fresh numId with startOverride when restarting a numbered list.
 		if opts.ListRestart && opts.ListType == ListTypeNumbered {
-			restartID, err := u.allocateRestartNumID(opts.ListLevel)
+			id, err := u.allocateRestartNumID(opts.ListLevel)
 			if err != nil {
 				return fmt.Errorf("allocate restart numId: %w", err)
 			}
-			listIDs.restartNumID = restartID
+			restartNumID = id
 		}
 	}
 
@@ -190,7 +190,7 @@ func (u *Updater) InsertParagraph(opts ParagraphOptions) error {
 	}
 
 	// Generate paragraph XML
-	paraXML := generateParagraphXML(opts, listIDs, urlRelIDs)
+	paraXML := generateParagraphXML(opts, listIDs, restartNumID, urlRelIDs)
 
 	// Insert paragraph at the specified position
 	updated, err := insertParagraphAtPosition(raw, paraXML, opts)
@@ -235,15 +235,38 @@ func (u *Updater) InsertParagraphs(paragraphs []ParagraphOptions) error {
 	}
 	listIDs := u.getListNumberingIDs()
 
-	// Pre-allocate restart numIds — one fresh <w:num> per restarting numbered paragraph.
+	// Batch-allocate restart numIds — single read+write of numbering.xml regardless of
+	// how many restarting paragraphs are present.
 	restartNumIDs := make([]int, len(paragraphs))
-	for i, opts := range paragraphs {
-		if opts.ListRestart && opts.ListType == ListTypeNumbered {
-			restartID, err := u.allocateRestartNumID(opts.ListLevel)
-			if err != nil {
-				return fmt.Errorf("allocate restart numId for paragraph %d: %w", i, err)
+	{
+		hasRestart := false
+		for _, opts := range paragraphs {
+			if opts.ListRestart && opts.ListType == ListTypeNumbered {
+				hasRestart = true
+				break
 			}
-			restartNumIDs[i] = restartID
+		}
+		if hasRestart {
+			numberingPath := filepath.Join(u.tempDir, "word", "numbering.xml")
+			data, err := os.ReadFile(numberingPath)
+			if err != nil {
+				return fmt.Errorf("read numbering.xml: %w", err)
+			}
+			content := string(data)
+			numberedNumID := listIDs.numberedNumID
+			for i, opts := range paragraphs {
+				if opts.ListRestart && opts.ListType == ListTypeNumbered {
+					newNumID, updated, err := allocateRestartNumIDInContent(content, numberedNumID, opts.ListLevel)
+					if err != nil {
+						return fmt.Errorf("allocate restart numId for paragraph %d: %w", i, err)
+					}
+					restartNumIDs[i] = newNumID
+					content = updated
+				}
+			}
+			if err := atomicWriteFile(numberingPath, []byte(content), 0o644); err != nil {
+				return fmt.Errorf("write numbering.xml: %w", err)
+			}
 		}
 	}
 
@@ -275,11 +298,7 @@ func (u *Updater) InsertParagraphs(paragraphs []ParagraphOptions) error {
 		if opts.Style == "" {
 			opts.Style = StyleNormal
 		}
-		paraListIDs := listIDs
-		if restartNumIDs[i] > 0 {
-			paraListIDs.restartNumID = restartNumIDs[i]
-		}
-		paraXML := generateParagraphXML(opts, paraListIDs, urlRelIDs)
+		paraXML := generateParagraphXML(opts, listIDs, restartNumIDs[i], urlRelIDs)
 		raw, err = insertParagraphAtPosition(raw, paraXML, opts)
 		if err != nil {
 			return fmt.Errorf("insert paragraph %d: %w", i, err)
@@ -297,7 +316,7 @@ func (u *Updater) InsertParagraphs(paragraphs []ParagraphOptions) error {
 // urlRelIDs maps URL strings to their relationship IDs (returned by addHyperlinkRelationship).
 // Runs with a non-empty URL are emitted as inline <w:hyperlink> elements when a
 // corresponding relationship ID exists in urlRelIDs; otherwise they fall back to plain runs.
-func generateParagraphXML(opts ParagraphOptions, listIDs listNumberingIDs, urlRelIDs map[string]string) []byte {
+func generateParagraphXML(opts ParagraphOptions, listIDs listNumberingIDs, restartNumID int, urlRelIDs map[string]string) []byte {
 	var buf bytes.Buffer
 
 	buf.WriteString("<w:p>")
@@ -320,8 +339,8 @@ func generateParagraphXML(opts ParagraphOptions, listIDs listNumberingIDs, urlRe
 		if opts.ListType == ListTypeBullet {
 			numID = listIDs.bulletNumID
 		} else if opts.ListType == ListTypeNumbered {
-			if opts.ListRestart && listIDs.restartNumID > 0 {
-				numID = listIDs.restartNumID
+			if restartNumID > 0 {
+				numID = restartNumID
 			} else {
 				numID = listIDs.numberedNumID
 			}
